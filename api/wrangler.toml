@@ -1,0 +1,18 @@
+name = "dosenzettel-api"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+# KV-Speicher für Dosenfotos und Beispiel-Piece.
+# Die id bekommst du mit: npx wrangler kv namespace create ASSETS
+[[kv_namespaces]]
+binding = "ASSETS"
+id = "HIER_DIE_KV_ID_EINTRAGEN"
+
+[vars]
+# Domains, die die Daten abrufen dürfen (kommagetrennt). Deine Pages-Domain eintragen.
+ALLOWED_ORIGINS = "https://dosenzettel.pages.dev,http://localhost:8788"
+CACHE_SECONDS = "600"
+
+# Geheim, NICHT hier eintragen, sondern mit:
+#   npx wrangler secret put GOOGLE_SERVICE_ACCOUNT   (Inhalt der JSON-Schlüsseldatei)
+#   npx wrangler secret put SHEET_ID

@@ -44,6 +44,63 @@ Zum Testen geht auch `index.html?api=https://api.example.org`. Ohne API startet 
 - `canImages` und `piece` sind optional. Ohne sie zeigt die Seite gezeichnete Dosen und eine Beispielskizze.
 - Die API muss CORS für die Domain der Seite erlauben.
 
+## Datenquelle einrichten (Cloudflare Worker)
+
+Der Ordner `api/` enthält den Worker. Er liest das Google Sheet über einen Google-Service-Account und holt die Dosenfotos und das Beispiel-Piece aus einem KV-Speicher. Der Code ist öffentlich, die Daten und Schlüssel nicht: die liegen nur bei Google, im KV-Speicher und in den Secrets des Workers.
+
+### 1. Google: Service-Account fürs Sheet
+
+1. In der Google Cloud Console ein Projekt wählen oder anlegen.
+2. Unter **APIs & Dienste → Bibliothek** die **Google Sheets API** aktivieren.
+3. Unter **IAM & Verwaltung → Dienstkonten** ein Dienstkonto anlegen, z. B. `dosenzettel-api`. Keine Rollen nötig.
+4. Beim Dienstkonto unter **Schlüssel → Schlüssel hinzufügen → JSON** eine Schlüsseldatei herunterladen. Die Datei nie ins Repo legen.
+5. Das Farbkarten-Sheet mit der E-Mail-Adresse des Dienstkontos (`…@….iam.gserviceaccount.com`) teilen, Rolle **Betrachter**.
+
+### 2. Cloudflare: Worker anlegen
+
+```bash
+cd api
+npm install
+npx wrangler login
+npx wrangler kv namespace create ASSETS
+```
+
+Die ausgegebene `id` in `api/wrangler.toml` bei `kv_namespaces` eintragen.
+
+### 3. Bilder in den KV-Speicher laden
+
+Die Dateien `canImages.json` (Dosenfotos) und `piece.json` (Beispiel-Piece) liegen nicht im Repo. Leg sie in einen Ordner `kv-daten/` neben `api/` (der Ordner ist in `.gitignore`) und lade sie hoch:
+
+```bash
+npx wrangler kv key put canImages --path=../kv-daten/canImages.json --binding=ASSETS --remote
+npx wrangler kv key put piece --path=../kv-daten/piece.json --binding=ASSETS --remote
+```
+
+### 4. Secrets setzen und deployen
+
+```bash
+npx wrangler secret put SHEET_ID                 # die ID aus der Sheet-URL
+npx wrangler secret put GOOGLE_SERVICE_ACCOUNT < pfad/zur/schluesseldatei.json
+npx wrangler deploy
+```
+
+Wrangler zeigt danach die Adresse des Workers, z. B. `https://dosenzettel-api.<dein-name>.workers.dev`. Test: `https://…workers.dev/data` im Browser öffnen, es sollte JSON kommen.
+
+### 5. Seite mit dem Worker verbinden
+
+1. In `index.html` die Worker-Adresse eintragen: `<meta name="dosenzettel-api" content="https://dosenzettel-api.<dein-name>.workers.dev">`
+2. Die Domain der Seite in `api/wrangler.toml` bei `ALLOWED_ORIGINS` eintragen und `npx wrangler deploy` erneut ausführen.
+
+### 6. Seite über Cloudflare Pages veröffentlichen
+
+Cloudflare Dashboard → **Workers & Pages → Erstellen → Pages → Mit Git verbinden** → Repo `dosenzettel`, Branch `main`, kein Build-Befehl, Ausgabeverzeichnis `/`.
+
+### Gut zu wissen
+
+- Der Worker merkt sich die Daten 10 Minuten (`CACHE_SECONDS`). Änderungen im Sheet sind spätestens dann online.
+- `ALLOWED_ORIGINS` verhindert, dass fremde Webseiten die Daten einbinden. Wer die Adresse `/data` direkt aufruft, bekommt die Daten trotzdem. Für die Testphase reicht das. Soll die Farbdatenbank später wirklich geschützt sein, muss die Zuordnung Farbe → Dose im Worker passieren, sodass die Seite nur noch Hex-Werte schickt und passende Dosen zurückbekommt.
+- Lokaler Test des Workers ohne Google und Cloudflare: `cd api && npm test`
+
 ## Lizenz
 
 AGPL-3.0, siehe `LICENSE`. Wer den Code verändert und online stellt, muss seinen Code ebenfalls offenlegen. Die Farbdaten gehören nicht zum Code und stehen nicht unter dieser Lizenz.
