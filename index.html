@@ -179,7 +179,9 @@ select.rolesel{width:auto;font-size:12.5px;font-weight:700;padding:3px 6px;borde
 select.rolesel.low{border-style:dashed;color:var(--accent);border-color:var(--accent)}
 .rolebtn.outline{border-style:dashed;color:var(--accent);border-color:var(--accent)}
 .rolebtn.highlight{border-style:dotted;color:var(--warn);border-color:var(--warn)}
-.rolegrid{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center}
+.rolegrid{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:6px 10px;align-items:center}
+.rolegrid input[type=checkbox]{margin:0}
+.rolegrid .off{opacity:.45}
 .rolegrid label{font-size:13px;font-weight:600}
 .drop canvas.loupe{position:fixed;width:176px;height:176px}
 .rolebtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -479,13 +481,14 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
         </div>
         <div class="field" id="oneWrap"><label for="brandSel">Marke</label><select id="brandSel"></select></div>
         <fieldset class="brandchecks" id="roleWrap" hidden><legend class="lbl">Marke pro Rolle</legend>
+          <p class="hint" style="margin:0 0 6px">Haken weg, wenn eine Rolle in deinem Piece nicht vorkommt. Ihre Farben zählen dann zu Outline bzw. Fill.</p>
           <div class="rolegrid">
-            <label for="rbFill">Fill</label><select id="rbFill" data-rb="fill"></select>
-            <label for="rbBackground">Background</label><select id="rbBackground" data-rb="background"></select>
-            <label for="rbOutline">Outline</label><select id="rbOutline" data-rb="outline"></select>
-            <label for="rbInline">Inline</label><select id="rbInline" data-rb="inline"></select>
-            <label for="rbBackline">Backline</label><select id="rbBackline" data-rb="backline"></select>
-            <label for="rbHighlight">Highlights</label><select id="rbHighlight" data-rb="highlight"></select>
+            <input type="checkbox" id="roFill" data-ro="fill" checked disabled title="Fill ist immer dabei" aria-label="Rolle Fill im Piece"><label for="rbFill" data-rl="fill">Fill</label><select id="rbFill" data-rb="fill"></select>
+            <input type="checkbox" id="roBackground" data-ro="background" checked aria-label="Rolle Background im Piece"><label for="rbBackground" data-rl="background">Background</label><select id="rbBackground" data-rb="background"></select>
+            <input type="checkbox" id="roOutline" data-ro="outline" checked aria-label="Rolle Outline im Piece"><label for="rbOutline" data-rl="outline">Outline</label><select id="rbOutline" data-rb="outline"></select>
+            <input type="checkbox" id="roInline" data-ro="inline" checked aria-label="Rolle Inline im Piece"><label for="rbInline" data-rl="inline">Inline</label><select id="rbInline" data-rb="inline"></select>
+            <input type="checkbox" id="roBackline" data-ro="backline" checked aria-label="Rolle Backline im Piece"><label for="rbBackline" data-rl="backline">Backline</label><select id="rbBackline" data-rb="backline"></select>
+            <input type="checkbox" id="roHighlight" data-ro="highlight" checked aria-label="Rolle Highlights im Piece"><label for="rbHighlight" data-rl="highlight">Highlights</label><select id="rbHighlight" data-rb="highlight"></select>
           </div>
         </fieldset>
         <fieldset class="brandchecks" id="mixWrap" hidden><legend class="lbl">Diese Marken mischen</legend><div id="mixList" class="row"></div>
@@ -682,13 +685,17 @@ const prSuffix=b=>{ const p=pressureOf(b); return p?" ("+PR_LABEL[p]+")":""; };
 /* Fill und Background: High Pressure. Outline, Inline, Backline, Highlights: feiner, Low Pressure. Medium passt überall. */
 const ROLES=["fill","background","outline","inline","backline","highlight"], ROLE_LABEL={fill:"Fill",background:"Background",outline:"Outline",inline:"Inline",backline:"Backline",highlight:"Highlights"};
 const HIGH_ROLES=new Set(["fill","background"]);
+const isRoleOn=r=>r==="fill"||!roleOff[r];
+function activeRoles(){ return splitRoles?ROLES.filter(isRoleOn):ROLES; }
+/* Abgewählte Rolle: dünne Linien gehen zu Outline, alles andere zu Fill */
+function fallbackRole(r){ if(!splitRoles||isRoleOn(r)) return r; if(["inline","backline","highlight"].includes(r)&&isRoleOn("outline")) return "outline"; return "fill"; }
 function pressureOk(b,role){ const p=pressureOf(b); if(!p) return true; return HIGH_ROLES.has(role)?p!=="low":p!=="high"; }
-let palette=[], paletteIsDemo=false, brands=[], matchBrand="", matchMode="one", mixPick={}, baseMode="solvent", splitRoles=false, roleOne={}, roleMix={}, priceMode="color";
+let palette=[], paletteIsDemo=false, brands=[], matchBrand="", matchMode="one", mixPick={}, baseMode="solvent", splitRoles=false, roleOne={}, roleMix={}, roleOff={}, priceMode="color";
 try{
   const m=JSON.parse(localStorage.getItem(STORE_MATCH)||"null");
-  if(m){ matchMode=m.mode==="mix"?"mix":"one"; matchBrand=m.brand||""; mixPick=(m.mix&&typeof m.mix==="object")?m.mix:{}; baseMode=m.base==="water"?"water":"solvent"; splitRoles=!!m.split; roleOne=(m.r1&&typeof m.r1==="object")?m.r1:{}; roleMix=(m.rm&&typeof m.rm==="object")?m.rm:{}; priceMode=["color","bal","cheap"].includes(m.pm)?m.pm:"color"; }
+  if(m){ matchMode=m.mode==="mix"?"mix":"one"; matchBrand=m.brand||""; mixPick=(m.mix&&typeof m.mix==="object")?m.mix:{}; baseMode=m.base==="water"?"water":"solvent"; splitRoles=!!m.split; roleOne=(m.r1&&typeof m.r1==="object")?m.r1:{}; roleMix=(m.rm&&typeof m.rm==="object")?m.rm:{}; priceMode=["color","bal","cheap"].includes(m.pm)?m.pm:"color"; roleOff=(m.ro&&typeof m.ro==="object")?m.ro:{}; }
 }catch(e){}
-function saveMatch(){ try{ localStorage.setItem(STORE_MATCH,JSON.stringify({mode:matchMode,brand:matchBrand,mix:mixPick,base:baseMode,split:splitRoles,r1:roleOne,rm:roleMix,pm:priceMode})); }catch(e){} }
+function saveMatch(){ try{ localStorage.setItem(STORE_MATCH,JSON.stringify({mode:matchMode,brand:matchBrand,mix:mixPick,base:baseMode,split:splitRoles,r1:roleOne,rm:roleMix,pm:priceMode,ro:roleOff})); }catch(e){} }
 function isWater(b){ const m=brandMeta.get(b); return m?m.water:/water\s*based|coversall/i.test(b); }
 function mixDefault(b){ const m=brandMeta.get(b); return m?m.mix:!brands.some(x=>brandMeta.has(x)); }
 function baseAllowed(b){ return (baseMode==="water")===isWater(b); }
@@ -735,6 +742,7 @@ function renderMatchUi(){
       :"Nimmt die günstigste Dose, die noch ähnlich ist (höchstens 24 % schlechter), und bündelt Farben bei einer Marke, damit Staffelpreise greifen. Der Sammelkorb wird mitgerechnet.")
     +(matchMode==="one"&&priceMode!=="color"?" Wirkt nur im Markenmix oder bei „Automatisch nach Druck“, weil sonst die Marke fest ist.":"");
   $("roleWrap").hidden=!splitRoles;
+  ROLES.forEach(r=>{ const C=r[0].toUpperCase()+r.slice(1), on=isRoleOn(r); $("ro"+C).checked=on; $("rb"+C).disabled=!on; $("rb"+C).classList.toggle("off",!on); document.querySelector('[data-rl="'+r+'"]').classList.toggle("off",!on); });
   $("oneWrap").hidden=matchMode!=="one"||splitRoles;
   $("thRole").hidden=!splitRoles;
   $("roleHint").textContent=!splitRoles
@@ -908,7 +916,7 @@ function estimateRoles(){
     const x=i%W, y=(i/W)|0;
     if((x>0&&assign[i-1]!==a)||(x<W-1&&assign[i+1]!==a)||(y>0&&assign[i-W]!==a)||(y<H-1&&assign[i+W]!==a)) edge[a]++;
   }
-  clusters.forEach((c,k)=>{ c.edge=tot[k]?edge[k]/tot[k]:1; c.role=c.isBg?"background":(c.edge>=0.42||c.share<0.02)?(c.lab[0]>=72?"highlight":"outline"):"fill"; });
+  clusters.forEach((c,k)=>{ if(c.extra) return; c.edge=tot[k]?edge[k]/tot[k]:1; c.role=fallbackRole(c.isBg?"background":(c.edge>=0.42||c.share<0.02)?(c.lab[0]>=72?"highlight":"outline"):"fill"); });
 }
 /* Selbst angetippte Farben: jedes Pixel zur nächsten Tipp-Farbe, zu weit weg = nicht gemalt */
 /* Mengen bleiben erhalten, wenn die Farben neu erkannt werden (z. B. anderer Regler-Wert) */
@@ -1081,7 +1089,7 @@ function renderSlots(){
   $("slots").innerHTML=combo.slots.map((sl,k)=>{
     const p=sl.can?palette.find(q=>q.brand+"|"+q.code===sl.can):null;
     return '<div class="slot" data-slot="'+sl.id+'">'+
-      '<select data-f="role" aria-label="Rolle von Farbe '+(k+1)+'">'+ROLES.map(r=>'<option value="'+r+'"'+(r===sl.role?" selected":"")+'>'+ROLE_LABEL[r]+'</option>').join("")+'</select>'+
+      '<select data-f="role" aria-label="Rolle von Farbe '+(k+1)+'">'+activeRoles().map(r=>'<option value="'+r+'"'+(r===fallbackRole(sl.role)?" selected":"")+'>'+ROLE_LABEL[r]+'</option>').join("")+'</select>'+
       '<input type="color" data-f="hex" value="'+sl.hex+'" aria-label="Farbe '+(k+1)+' frei wählen">'+
       '<input type="text" data-f="can" list="canList" value="'+(p?esc(canLabel(p)):"")+'" placeholder="Dose: Code oder Name" aria-label="Dose für Farbe '+(k+1)+'">'+
       '<button type="button" class="x" data-f="rm" aria-label="Farbe '+(k+1)+' entfernen">×</button></div>';
@@ -1093,7 +1101,7 @@ function buildCombo(){
   const prev=new Map(clusters.filter(c=>c.slotId!=null).map(c=>[c.slotId,c]));
   const tot=combo.slots.reduce((a,sl)=>a+(ROLE_WEIGHT[sl.role]||1),0)||1;
   clusters=combo.slots.map(sl=>{ const rgb=hexToRgb(sl.hex), o=prev.get(sl.id);
-    return {rgb,hex:sl.hex,lab:srgbToLab(...rgb),share:(ROLE_WEIGHT[sl.role]||1)/tot,include:o?o.include:true,isBg:false,role:sl.role,qty:sl.qty??1,slotId:sl.id,pinKey:sl.can||null}; });
+    return {rgb,hex:sl.hex,lab:srgbToLab(...rgb),share:(ROLE_WEIGHT[sl.role]||1)/tot,include:o?o.include:true,isBg:false,role:fallbackRole(sl.role),qty:sl.qty??1,slotId:sl.id,pinKey:sl.can||null}; });
   clusters.sort((a,b)=>b.share-a.share);
   saveCombo(); matchAll();
 }
@@ -1306,7 +1314,7 @@ function render(){
     const subs=imageSubs(c.lab,pal.brand,c.role).slice(0,3).map(q=>'<button type="button" class="it" data-i="'+i+'" data-pi="'+q.p.i+'" title="'+esc(q.p.brand+' '+q.p.code+' '+q.p.name)+' übernehmen"><span class="sw sm" style="background:'+q.p.hex+'"></span><b>'+esc(q.p.brand)+'</b> <span class="mono">'+esc(q.p.code)+'</span> '+deChip(q.de)+'</button>').join("");
     return '<tr class="'+(c.include?"":"off")+'">'+
       '<td class="mid"><input type="checkbox" id="inc'+i+'" data-i="'+i+'"'+(c.include?" checked":"")+' aria-label="Farbe '+(i+1)+' malen">'+(c.isBg?'<span class="bgtag">Hintergrund</span>':'')+(c.extra?'<span class="xtag">Zusatz</span><button type="button" class="rmx" data-rmx="'+i+'">Entfernen</button>':'')+'</td>'+
-      (splitRoles?'<td class="mid"><select class="rolesel'+(HIGH_ROLES.has(c.role)?'':' low')+'" data-role="'+i+'" aria-label="Rolle für Farbe '+(i+1)+'">'+ROLES.map(r=>'<option value="'+r+'"'+(r===c.role?' selected':'')+'>'+ROLE_LABEL[r]+'</option>').join("")+'</select></td>':'')+
+      (splitRoles?'<td class="mid"><select class="rolesel'+(HIGH_ROLES.has(c.role)?'':' low')+'" data-role="'+i+'" aria-label="Rolle für Farbe '+(i+1)+'">'+activeRoles().map(r=>'<option value="'+r+'"'+(r===c.role?' selected':'')+'>'+ROLE_LABEL[r]+'</option>').join("")+'</select></td>':'')+
       '<td><div class="pair">'+(c.tap?'<span class="tapno">'+c.tap+'</span>':'')+'<span class="sw" style="background:'+c.hex+'" title="Bild '+c.hex+'"></span><span class="arrow">→</span><span class="sw" style="background:'+pal.hex+'" title="'+esc(pal.code)+' '+pal.hex+'"></span></div></td>'+
       '<td><select id="sel'+i+'" data-i="'+i+'" aria-label="Dose für Farbe '+(i+1)+'">'+opts+'</select>'+(subs?'<div class="subs">Andere Marken: '+subs+'</div>':'')+'</td>'+
       '<td class="mid">'+deChip(d)+(c.priceSwap?'<span class="pricechip" title="Wegen des Preises statt '+esc(palette[c.best].brand+' '+palette[c.best].code)+' gewählt">günstiger</span>':'')+'</td>'+
@@ -1716,7 +1724,17 @@ $("pmCheap").addEventListener("click",()=>setPriceMode("cheap"));
 function setSplit(on){ splitRoles=on; renderMatchUi(); saveMatch(); matchAll(); }
 $("roleSame").addEventListener("click",()=>setSplit(false));
 $("roleSplit").addEventListener("click",()=>setSplit(true));
-$("roleWrap").addEventListener("change",e=>{ const r=e.target.dataset.rb; if(!r) return; if(matchMode==="mix") roleMix[r]=e.target.value; else { roleOne[r]=e.target.value; if(r==="fill"){ matchBrand=e.target.value; save(); } } saveMatch(); matchAll(); });
+$("roleWrap").addEventListener("change",e=>{
+  const ro=e.target.dataset.ro;
+  if(ro&&ro!=="fill"){
+    if(e.target.checked) delete roleOff[ro]; else roleOff[ro]=true;
+    if(e.target.checked&&mode!=="combo"&&px&&assign) estimateRoles();
+    saveMatch(); renderMatchUi();
+    if(mode==="combo"){ renderSlots(); buildCombo(); return; }
+    clusters.forEach(c=>{ const n=fallbackRole(c.role); if(n!==c.role){ c.role=n; if(c.tap&&picks[c.tap-1]) picks[c.tap-1].role=n; } });
+    matchAll(); return;
+  }
+  const r=e.target.dataset.rb; if(!r) return; if(matchMode==="mix") roleMix[r]=e.target.value; else { roleOne[r]=e.target.value; if(r==="fill"){ matchBrand=e.target.value; save(); } } saveMatch(); matchAll(); });
 $("mMix").addEventListener("click",()=>setMatchMode("mix"));
 $("mixList").addEventListener("change",e=>{ const b=e.target.dataset.brand; if(b==null) return; mixPick[b]=e.target.checked; saveMatch(); matchAll(); });
 $("mixDefault").addEventListener("click",()=>{ mixPick={}; saveMatch(); renderBrandLists(); matchAll(); });
