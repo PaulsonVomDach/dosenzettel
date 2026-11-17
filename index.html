@@ -1,12 +1,1971 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dosenzettel</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="dosenzettel-api" content="">
+<title>Dosenzettel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik+Bubbles&family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800;1,900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* VOICE   Zine aus der Szene: ruhig, aber mit Sticker-Charakter (Richtung Ghetto Fever, nur leiser)
+   IDEA    Sticker auf Zeitungspapier: Panels wie aufgeklebte Sticker mit dicker Outline und hartem Versatzschatten
+   PICTURE die Dosenreihe und die Vorschau, sonst nichts im Hintergrund
+   COLOUR  Zeitungspapier, Tusche-Schwarz, gedecktes Königsblau als einziger Akzent; nachts Tinte mit hellem Blau
+   TYPE    Rubik Bubbles nur für den Namen, Archivo Black kursiv für Überschriften, Archivo für Text, Plex Mono für Codes
+   LAYOUT  Kopf über volle Breite, darunter links Bild und Einstellungen, rechts Ergebnis; auf dem Handy alles untereinander */
+:root{
+  --wall:#e8e5dd;
+  --panel:#fbfaf6;
+  --ink:#16171c;
+  --muted:#5b5a60;
+  --line:#cdc9be;
+  --accent:#34469e;
+  --on-accent:#ffffff;
+  --shadow:#16171c;
+  --good:#2f7a4f;
+  --warn:#8f6418;
+  --bad:#a8322b;
+  --page:#e8e5dd;
+  --page-ink:#16171c;
+  --page-muted:#55545a;
+  --page-accent:#34469e;
+  --card-shadow:#16171c;
+  --font-bubble:"Rubik Bubbles", "Archivo", Impact, sans-serif;
+  --font-display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:light;
+}
+/* Dunkel: nur der Seitenhintergrund wird dunkel, Boxen und Schriftzug bleiben hell wie Sticker */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#131418; --page-ink:#f3f2ee; --page-muted:#c9c8ce; --page-accent:#7f90e4; --card-shadow:#4a4e60;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#131418; --page-ink:#f3f2ee; --page-muted:#c9c8ce; --page-accent:#7f90e4; --card-shadow:#4a4e60;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0}
+body{background:var(--page);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 28px;border-bottom:3px solid var(--ink);padding-bottom:14px;margin-bottom:22px}
+h1{font-family:var(--font-display);font-weight:900;font-size:clamp(48px,8vw,92px);line-height:.85;letter-spacing:.01em;margin:0;text-transform:uppercase;text-wrap:balance}
+h1 span{color:var(--accent)}
+.lede{max-width:42ch;margin:0;color:var(--muted)}
+.brand{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.slogan{display:inline-block;margin:0;padding:4px 12px 5px;background:var(--ink);color:var(--wall);font-family:var(--font-display);font-weight:900;font-size:clamp(15px,2vw,20px);letter-spacing:.06em;text-transform:uppercase;transform:rotate(-2deg);transform-origin:left center;border-radius:2px}
+h2{font-family:var(--font-display);font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.02em;margin:0;text-wrap:balance}
+.grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:22px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.drop{position:relative;border:2px dashed var(--line);border-radius:6px;background:var(--wall);overflow:hidden}
+.drop.over{border-color:var(--accent)}
+.drop.cropping{border-color:var(--accent);border-style:solid}
+.drop.cropping canvas{cursor:crosshair;touch-action:none}
+.drop canvas{display:block;width:100%;height:auto}
+.drop canvas.loupe{position:absolute;border-radius:50%;border:3px solid var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.35);pointer-events:none;z-index:2}
+.drop.picking{border-color:var(--accent);border-style:solid}
+.drop.picking canvas#preview{cursor:none;touch-action:none}
+.sub{border-left:3px solid var(--line);padding-left:12px;gap:12px}
+.kmode{font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:999px;border:1.5px solid var(--muted);color:var(--muted);margin-left:4px}
+.picklist{display:flex;flex-wrap:wrap;gap:6px}
+.picklist .pk{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;padding:3px 4px 3px 4px;font-size:12.5px;background:var(--panel)}
+.picklist .pk .sw{width:20px;height:20px;border-radius:50%}
+.picklist .pk button{all:unset;cursor:pointer;width:20px;height:20px;border-radius:50%;text-align:center;line-height:20px;font-weight:700;color:var(--muted)}
+.picklist .pk button:hover{background:var(--wall);color:var(--ink)}
+.picklist .pk button:focus-visible{outline:2px solid var(--accent)}
+.drop.wanding{border-color:var(--accent);border-style:solid}
+.drop.wanding canvas{cursor:cell}
+.drop .chip{position:absolute;top:8px;left:8px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-weight:600;font-size:14px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:4px;padding:7px 12px;cursor:pointer}
+.btn:hover{background:var(--ink);color:var(--panel)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(.92);background:var(--accent);color:#fff}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.btn[hidden]{display:none}
+.btn:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.can:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.seg{display:inline-flex}
+.seg .btn{border-radius:0}
+.seg .btn:first-child{border-radius:4px 0 0 4px}
+.seg .btn:last-child{border-radius:0 4px 4px 0;margin-left:-1.5px}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--ink);color:var(--panel);letter-spacing:.02em}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:4px}
+label,.lbl{font-size:13px;font-weight:600}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+input[type=number],input[type=text],select,textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--wall);border:1.5px solid var(--line);border-radius:4px;padding:7px 9px;width:100%}
+input[type=number]{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+textarea{font-family:var(--font-mono);font-size:12.5px;min-height:110px;resize:vertical}
+.check{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500}
+.field[hidden],.brandchecks[hidden]{display:none}
+.brandchecks{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+.brandchecks legend{padding:0;margin-bottom:6px}
+.brandchecks .row{gap:6px 16px}
+.sheetbox{border:1.5px solid var(--line);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--wall)}
+.sheetline{margin:0;display:flex;gap:8px;align-items:baseline;font-size:13.5px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none;transform:translateY(1px)}
+.dot.ok{background:var(--good)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+a.btn{text-decoration:none;display:inline-block}
+.btn[disabled]{opacity:.5;cursor:wait}
+.cangroup + .cangroup{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
+.grouphead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 12px;margin-top:6px}
+.btn.small{font-size:12.5px;padding:4px 9px}
+.cangroup h3{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.05em;display:flex;gap:8px;align-items:baseline}
+.cangroup h3 span{font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0}
+.kval{font-family:var(--font-mono);font-weight:500}
+#comboCv{width:100%;height:auto;display:block;border-radius:var(--radius,6px);border:1.5px solid var(--ink)}
+.slots{display:flex;flex-direction:column;gap:8px}
+.slot{display:grid;grid-template-columns:118px 44px 1fr 30px;gap:6px;align-items:center}
+.slot select,.slot input[type=text]{width:100%;padding:5px 6px;font-size:13px}
+.slot input[type=color]{width:44px;height:34px;padding:0;border:1.5px solid var(--ink);border-radius:4px;background:none;cursor:pointer}
+.slot .x{all:unset;cursor:pointer;width:28px;height:28px;border-radius:50%;text-align:center;line-height:28px;font-weight:700}
+.slot .x:hover,.slot .x:focus-visible{background:var(--ink);color:var(--wall)}
+@media (max-width:520px){.slot{grid-template-columns:1fr 44px 30px}.slot input[type=text]{grid-column:1/-1;grid-row:2}}
+.addrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:12px}
+.addrow input{flex:1 1 180px;width:auto}
+.pieces{display:flex;flex-wrap:wrap;gap:6px}
+.pieces .pc{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--ink);border-radius:999px;padding:2px 4px 2px 10px;font-size:13px;font-weight:600}
+.pieces .pc small{font-weight:400;color:var(--muted)}
+.pieces .pc button{all:unset;cursor:pointer;width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;font-weight:700}
+.pieces .pc button:hover,.pieces .pc button:focus-visible{background:var(--ink);color:var(--wall)}
+.btab{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px;table-layout:fixed}
+.btab td.s{width:30px}
+.btab .sw{display:inline-block;vertical-align:middle}
+.btab td{padding:5px 6px;border-top:1px solid var(--line);vertical-align:middle}
+.btab td.q{width:118px}
+.btab td.pr{width:84px;text-align:right;font-family:var(--font-mono);white-space:nowrap}
+.btab .from{display:block;font-size:11.5px;color:var(--muted)}
+.qty{display:inline-flex;align-items:center;gap:2px}
+.qty input{width:48px;text-align:center;padding:4px 2px}
+.qty button{all:unset;cursor:pointer;width:26px;height:26px;border:1.5px solid var(--line);border-radius:4px;text-align:center;line-height:24px;font-weight:700}
+.qty button:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.tierline{font-size:12.5px;color:var(--muted);margin:4px 0 0}
+.tierline b{color:var(--ink)}
+.btotal{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 14px;border-top:2px solid var(--ink);padding-top:10px}
+.btotal b{font-family:var(--font-display);font-size:28px;font-weight:900}
+.pricechip{font-size:11px;font-weight:700;color:var(--good);border:1.5px solid var(--good);border-radius:999px;padding:1px 6px;margin-left:4px;white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.can .price{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.tile b{display:block;font-family:var(--font-display);font-weight:900;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.tile span{font-size:13px;color:var(--muted)}
+.tile.hot b{color:var(--accent)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 8px;border-bottom:2px solid var(--ink);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.off td{opacity:.45}
+td.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;padding-top:14px}
+th.num{text-align:right}
+td.mid{padding-top:14px}
+.sw{width:30px;height:30px;border-radius:4px;border:1.5px solid var(--ink);flex:none}
+.sw.sm{width:16px;height:16px;border-width:1px;border-radius:3px}
+.pair{display:flex;align-items:center;gap:6px}
+.arrow{color:var(--muted);font-size:13px}
+td select{min-width:220px;padding:5px 7px;font-size:13px}
+.de{font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap;border:1.5px solid currentColor;display:inline-block}
+.de.good{color:var(--good)} .de.warn{color:var(--warn)} .de.bad{color:var(--bad)}
+.tapno{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--muted);min-width:1.4em;text-align:right}
+.bgtag{font-size:11px;color:var(--muted);display:block}
+select.rolesel{width:auto;font-size:12.5px;font-weight:700;padding:3px 6px;border-radius:999px;border:1.5px solid var(--ink)}
+select.rolesel.low{border-style:dashed;color:var(--accent);border-color:var(--accent)}
+.rolebtn.outline{border-style:dashed;color:var(--accent);border-color:var(--accent)}
+.rolebtn.highlight{border-style:dotted;color:var(--warn);border-color:var(--warn)}
+.rolegrid{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:6px 10px;align-items:center}
+.rolegrid input[type=checkbox]{margin:0}
+.rolegrid .off{opacity:.45}
+.rolegrid label{font-size:13px;font-weight:600}
+.drop canvas.loupe{position:fixed;width:176px;height:176px}
+.rolebtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.prtag{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:999px;border:1.5px solid var(--muted);color:var(--muted)}
+.can .role{font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+.subs{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:12px;color:var(--muted)}
+.subs .it{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:2px 6px;margin:-2px -6px;border-radius:4px}
+.subs .it:hover{background:var(--wall)}
+.subs .it:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.subs b{font-weight:600;color:var(--ink)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.cans{display:flex;flex-wrap:wrap;gap:16px 10px;align-items:stretch;padding:10px 0 4px}
+.canwrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+.canwrap .can{flex:1 1 auto;justify-content:flex-start}
+.canwrap .qty{margin-top:auto}
+.canwrap .qty input{width:38px}
+.qty.sm button{width:22px;height:22px;line-height:20px}
+.qty.sm input{padding:2px;font-size:13px}
+.can{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:4px;width:84px;text-align:center;cursor:pointer;padding:6px 2px;border-radius:6px}
+.can:hover{background:var(--wall)}
+.can .canpic{height:96px;display:flex;align-items:flex-end;justify-content:center}
+.can img.canimg{height:96px;width:auto;display:block}
+.can .stripe{display:block;width:60px;height:12px;border-radius:3px;border:1.5px solid var(--ink);margin:2px 0 2px}
+.can .name{min-height:2.4em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.can svg{width:42px;height:84px;display:block}
+.can .count{font-family:var(--font-display);font-weight:900;font-size:26px;line-height:1}
+.can .code{font-family:var(--font-mono);font-size:11.5px;line-height:1.2}
+.can .name{font-size:12px;color:var(--muted);line-height:1.2}
+.listhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px}
+.status{font-size:13px;color:var(--good);min-height:1.5em;margin:0}
+.copyfallback{display:none;margin-top:10px}
+.copyfallback.show{display:block}
+.note{border-left:4px solid var(--accent);padding:6px 0 6px 12px;font-size:13.5px;color:var(--muted);margin:0}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.finder-src{display:flex;align-items:center;gap:12px;padding:12px;border:1.5px solid var(--ink);border-radius:6px;background:var(--wall)}
+.finder-src .sw{width:46px;height:46px}
+.finder-src .t{font-weight:700;font-size:16px}
+.finder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.brandcard{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--panel)}
+.brandcard h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em}
+.brandcard ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.brandcard li{display:grid;grid-template-columns:auto 1fr auto;gap:4px 8px;align-items:center;font-size:13px}
+.brandcard li .acts{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:6px}
+.finder-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr))}
+.brandcard{border:2px solid var(--line);border-radius:12px}
+.brandcard li{grid-template-columns:auto minmax(0,1fr) auto}
+.brandcard li .pr{display:block;font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.ctxbox{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border:2px dashed var(--accent);border-radius:12px;font-size:13.5px}
+.ctxbox .sw{width:26px;height:26px}
+.finder-acts{display:flex;flex-wrap:wrap;gap:8px}
+.xtag{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;border:2px solid var(--accent);color:var(--accent);display:inline-block;margin-top:4px}
+.rmx{all:unset;cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);text-decoration:underline;display:block;margin-top:4px}
+.brandcard li .sw{width:26px;height:26px}
+.empty{font-size:13px;color:var(--muted)}
+@media (max-width:520px){.tiles{grid-template-columns:1fr 1fr 1fr}.tile b{font-size:36px}.fields{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+/* ---------- Sticker-Look ---------- */
+header{border-bottom:2px solid var(--page-ink);align-items:center;color:var(--page-ink)}
+.lede{color:var(--page-muted)}
+h1{font-family:var(--font-bubble);font-weight:400;text-transform:none;letter-spacing:0;line-height:.95;font-size:clamp(46px,8.6vw,100px);color:var(--panel);-webkit-text-stroke:2.5px var(--ink);paint-order:stroke fill;text-shadow:5px 5px 0 var(--page-accent)}
+h1 span{color:inherit}
+.slogan{font-family:var(--font-display);font-weight:900;font-style:italic;letter-spacing:.01em;background:var(--accent);color:var(--on-accent);border:2px solid var(--ink);border-radius:6px;box-shadow:3px 3px 0 var(--card-shadow);padding:5px 14px 6px}
+h2{font-family:var(--font-display);font-weight:900;font-style:italic;font-size:24px;letter-spacing:0;line-height:1.05}
+.panel{background:var(--panel);color:var(--ink);border:2px solid var(--ink);border-radius:16px;box-shadow:4px 4px 0 var(--card-shadow);padding:20px}
+.tile{background:var(--panel);color:var(--ink);border:2px solid var(--ink);border-radius:14px;box-shadow:3px 3px 0 var(--card-shadow)}
+.tile b{font-family:var(--font-display);font-weight:900;font-style:italic;font-size:40px}
+.tile.hot b{color:var(--accent)}
+.btn{border:2px solid var(--ink);border-radius:999px;padding:7px 14px;font-weight:700;transition:transform .08s,box-shadow .08s}
+.btn:hover{background:var(--panel);color:var(--ink);transform:translate(-1px,-1px);box-shadow:2px 2px 0 var(--shadow)}
+.btn.primary{background:var(--accent);border-color:var(--ink);color:var(--on-accent)}
+.btn.primary:hover{filter:none;background:var(--accent);color:var(--on-accent)}
+.btn[aria-pressed="true"],.btn[aria-pressed="true"]:hover{background:var(--ink);color:var(--panel)}
+.seg .btn{border-radius:0;margin-left:-2px}
+.seg .btn:first-child{border-radius:999px 0 0 999px;margin-left:0}
+.seg .btn:last-child{border-radius:0 999px 999px 0}
+.seg .btn:hover{transform:none;box-shadow:none}
+.seg{flex-wrap:wrap}
+input[type=number],input[type=text],select,textarea{background:var(--panel);border:2px solid var(--line);border-radius:10px}
+input[type=number]:focus,input[type=text]:focus,select:focus,textarea:focus{border-color:var(--ink)}
+.drop{border:2px dashed var(--line);border-radius:12px}
+#comboCv{border:2px solid var(--ink);border-radius:12px}
+.chip{background:var(--ink);color:var(--panel);font-weight:700;border-radius:999px}
+th{color:var(--ink);font-weight:800;letter-spacing:.03em}
+.sheetbox{border:2px solid var(--line);border-radius:12px;background:var(--wall)}
+.cangroup h3{font-family:var(--font-display);font-weight:900;font-style:italic;font-size:15px;letter-spacing:.01em}
+.can{border-radius:12px}
+.can .stripe{border-width:2px;border-radius:999px}
+.prtag{border-width:2px;color:var(--ink);border-color:var(--ink)}
+.qty button{border:2px solid var(--line);border-radius:999px}
+.qty button:hover{border-color:var(--ink)}
+.pieces .pc{border-width:2px;background:var(--panel)}
+.btotal{border-top:2px solid var(--ink)}
+.btotal b{font-family:var(--font-display);font-style:italic;font-weight:900}
+.finder-src{border:2px solid var(--ink);border-radius:12px}
+.drop canvas.loupe{border-color:var(--ink)}
+@media (prefers-reduced-motion: reduce){.btn{transition:none}.btn:hover{transform:none}}
+.homie{display:inline-block;margin:-2px 0 0 26px;padding:3px 12px 4px;background:var(--panel);color:var(--ink);border:2px solid var(--ink);border-radius:6px;box-shadow:3px 3px 0 var(--card-shadow);font-family:var(--font-display);font-weight:900;font-style:italic;font-size:clamp(13px,1.6vw,16px);text-transform:uppercase;letter-spacing:.02em;transform:rotate(1.5deg)}
+.intro{display:flex;flex-direction:column;gap:12px;max-width:42ch}
+.themeseg .btn{font-size:12.5px;padding:4px 11px;background:var(--panel);color:var(--ink)}
+.themeseg .btn[aria-pressed="true"]{background:var(--ink);color:var(--panel);box-shadow:inset 0 0 0 2px var(--panel)}
+.local{color:var(--ink);box-shadow:3px 3px 0 var(--card-shadow);display:flex;gap:10px;align-items:flex-start;margin:0;padding:8px 12px;border:2px solid var(--ink);border-radius:12px;background:var(--panel);font-size:13.5px;line-height:1.4}
+.local svg{flex:none;width:20px;height:20px;margin-top:1px}
+.local b{font-weight:800}
+.localhint{font-size:12.5px;color:var(--muted);margin:-4px 0 0}
+.privacy{margin-top:26px}
+.privacy ul{margin:0;padding-left:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:8px 36px}
+.local a{color:var(--accent);font-weight:700}
+.privacy li{font-size:14px}
+.howto{border:2px solid var(--ink);border-radius:14px;background:var(--wall)}
+.howto>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 14px;font-weight:800}
+.howto>summary::-webkit-details-marker{display:none}
+.howto>summary .q{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-weight:900;font-style:italic;border:2px solid var(--ink)}
+.howto>summary .chev{margin-left:auto;transition:transform .15s}
+.howto[open]>summary .chev{transform:rotate(180deg)}
+.howto>summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:12px}
+.howto .hbody{padding:4px 14px 16px;display:flex;flex-direction:column;gap:14px}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:14px}
+.steps li{background:var(--panel);border:2px solid var(--ink);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;counter-increment:st}
+.steps{counter-reset:st}
+.steps li h4{margin:0;font-size:14px;font-weight:800;display:flex;gap:8px;align-items:baseline}
+.steps li h4::before{content:counter(st);font-style:italic;font-weight:900;color:var(--accent);font-size:20px;line-height:1}
+.steps li p{margin:0;font-size:13px;color:var(--muted)}
+.steps li p b,.howto .warn b{color:var(--ink);font-weight:800}
+.steps svg{width:100%;height:auto;display:block;border-radius:8px;background:var(--wall)}
+.steps svg .pa{fill:var(--panel)} .steps svg .wl{fill:var(--wall)} .steps svg .ik{fill:var(--ink)} .steps svg .ln{fill:none;stroke:var(--ink);stroke-width:2}
+.steps svg .mu{fill:var(--muted)} .steps svg .li{fill:var(--line)} .steps svg .ac{fill:var(--accent)} .steps svg .acs{fill:none;stroke:var(--accent);stroke-width:3}
+.steps svg text{font-family:var(--font-body);font-size:11px;fill:var(--ink)} .steps svg .mono{font-family:var(--font-mono)} .steps svg .wt{fill:var(--on-accent);font-weight:700} .steps svg .pt{fill:var(--panel)}
+.howto kbd{font-family:var(--font-mono);font-size:12px;border:2px solid var(--ink);border-bottom-width:3px;border-radius:5px;padding:0 5px;background:var(--panel)}
+.howto .warn{font-size:13px;margin:0;padding:8px 10px;border-left:3px solid var(--warn);background:var(--panel);border-radius:0 8px 8px 0}
+
+.feedback{margin-top:22px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 28px;align-items:center}
+.feedback p{margin:0;max-width:70ch}
+@media (max-width:600px){.feedback{grid-template-columns:1fr}}
+.grid>*,.stack>*,.panel,.field,.row>*{min-width:0}
+.btab{table-layout:auto}
+@media (max-width:600px){.wrap{padding:20px 16px 48px}.panel{padding:16px;border-radius:14px}.tiles{gap:8px}.tile{padding:10px}.tile b{font-size:30px}.btab td.q{width:auto}}
+</style>
 </head>
 <body>
-  <h1>Dosenzettel</h1>
-  <p>Coming soon.</p>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Dosen<span>zettel</span></h1>
+      <p class="slogan">Von Writern für Writer</p>
+      <p class="homie">Berlin Original</p>
+    </div>
+    <div class="intro">
+    <div class="seg themeseg" role="group" aria-label="Hintergrund">
+      <button class="btn" type="button" data-theme-set="light" aria-pressed="true">Hell</button>
+      <button class="btn" type="button" data-theme-set="dark" aria-pressed="false">Dunkel</button>
+    </div>
+    <p class="lede">Skizze oder Foto rein, Farben raus. Der Dosenzettel zieht die Farben aus deinem Sketch oder einem Piece, das dir gefällt, oder du stellst dir eine Farbkombi zusammen. Dann sucht er die nächsten Dosen aus deinen Farbkarten und zeigt Ersatz aus anderen Marken. Wie viele Dosen du pro Farbe brauchst, stellst du selbst ein.</p>
+    <p class="local"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="9" width="13" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.5 9V6.5a3.5 3.5 0 0 1 7 0V9" fill="none" stroke="currentColor" stroke-width="2"/></svg><span><b>Läuft nur in deinem Browser.</b> Deine Fotos und Skizzen werden nicht hochgeladen und nirgends gespeichert. <a href="#datenschutz">Wie genau?</a></span></p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="panel stack" aria-labelledby="h-sketch">
+        <div class="listhead">
+          <h2 id="h-sketch">Bild</h2>
+          <div class="seg" role="group" aria-label="Was willst du machen">
+            <button class="btn" id="modeSketch" aria-pressed="true" type="button">Skizze</button>
+            <button class="btn" id="modePhoto" aria-pressed="false" type="button">Foto vom Piece</button>
+            <button class="btn" id="modeCombo" aria-pressed="false" type="button">Farbkombi</button>
+          </div>
+        </div>
+        <p class="hint" id="modeHint"></p>
+        <div class="stack" id="comboOpts" hidden>
+          <canvas id="comboCv" width="900" height="376" role="img" aria-label="Vorschau der Farbkombi am Beispiel-Piece"></canvas>
+          <div class="row">
+            <div class="seg" role="group" aria-label="Vorschau der Kombi">
+              <button class="btn" id="cvMine" aria-pressed="false" type="button">Deine Farben</button>
+              <button class="btn" id="cvCans" aria-pressed="true" type="button">Dosenfarben</button>
+            </div>
+            <button class="btn" id="comboRandom" type="button">Zufällige Kombi</button>
+            <button class="btn" id="comboPhoto" type="button">Farben vom Foto</button>
+          </div>
+          <div class="slots" id="slots"></div>
+          <datalist id="canList"></datalist>
+          <div class="row"><button class="btn" id="slotAdd" type="button">Farbe hinzufügen</button></div>
+          <p class="hint">Pro Zeile eine Rolle und eine Farbe. Die Farbe wählst du frei mit dem Farbfeld oder tippst rechts Code oder Name einer Dose ein, dann nimmt der Rechner genau diese Dose. Das Piece wird nach Rollen umgefärbt: Fill 1 ist oben, Fill 2 unten im Fade, Fill 3 sind die Bubbles. Inline ist die weiße Linie innen an der Outline, Backline der Rand um die Wolke.</p>
+          <div class="addrow">
+            <input type="text" id="comboName" placeholder="Name, z. B. Sommer-Kombi" aria-label="Name für diese Kombi" maxlength="40">
+            <button class="btn" id="comboSave" type="button">Kombi speichern</button>
+          </div>
+          <div class="pieces" id="comboSaved"></div>
+        </div>
+        <div class="drop" id="drop">
+          <canvas id="preview" width="600" height="300" aria-label="Vorschau des Bildes"></canvas>
+          <span class="chip" id="demoChip">Beispiel</span>
+          <canvas class="loupe" id="loupe" width="352" height="352" hidden aria-hidden="true"></canvas>
+        </div>
+        <div class="row" id="viewRow">
+          <div class="seg" role="group" aria-label="Vorschau">
+            <button class="btn" id="viewOrig" aria-pressed="true" type="button">Original</button>
+            <button class="btn" id="viewCans" aria-pressed="false" type="button">Mit Dosenfarben</button>
+          </div>
+        </div>
+        <div class="row" id="uploadRow">
+          <label class="btn primary" for="file">Bild hochladen</label>
+          <input type="file" id="file" accept="image/*">
+          <button class="btn" id="demoBtn" type="button">Beispiel</button>
+        </div>
+        <p class="localhint" id="uploadLocal">Dein Bild bleibt auf deinem Gerät. Es wird nur hier im Browser ausgewertet.</p>
+
+        <div class="stack sub" id="photoOpts" hidden>
+          <div class="field">
+            <span class="lbl" id="lblHow">Farben finden</span>
+            <div class="seg" role="group" aria-labelledby="lblHow">
+              <button class="btn" id="howAuto" aria-pressed="true" type="button">Automatisch</button>
+              <button class="btn" id="howPick" aria-pressed="false" type="button">Selbst antippen</button>
+            </div>
+            <p class="hint" id="howHint"></p>
+          </div>
+          <div class="row">
+            <button class="btn" id="cropBtn" type="button" aria-pressed="false">Ausschnitt wählen</button>
+            <button class="btn" id="uncropBtn" type="button" hidden>Ganzes Bild</button>
+          </div>
+          <div class="stack" id="autoTools">
+            <div class="row">
+              <button class="btn" id="wandBtn" type="button" aria-pressed="false">Untergrund antippen</button>
+              <button class="btn" id="wandUndo" type="button" hidden>Rückgängig</button>
+              <button class="btn" id="wandReset" type="button" hidden>Alles wieder rein</button>
+            </div>
+            <div class="field" id="tolWrap" hidden>
+              <label for="tol">Toleranz: <span class="kval" id="tolOut">16</span></label>
+              <input type="range" id="tol" min="4" max="40" value="16">
+              <p class="hint">Tipp auf Zug, Wand oder Himmel. Die zusammenhängende Fläche in dieser Farbe fliegt raus und wird abgedunkelt. Linien im Piece bleiben drin, solange sie nicht direkt an der Fläche hängen. Nimmt er zu viel weg: Rückgängig und Toleranz runter. Zu wenig: Toleranz hoch oder nochmal tippen.</p>
+            </div>
+          </div>
+          <div class="stack" id="pickTools" hidden>
+            <div class="row">
+              <button class="btn primary" id="pickBtn" type="button" aria-pressed="true">Fertig</button>
+              <button class="btn" id="pickUndo" type="button">Letzte entfernen</button>
+              <button class="btn" id="pickClear" type="button">Alle löschen</button>
+            </div>
+            <div class="picklist" id="pickList" aria-live="polite"></div>
+            <div class="field">
+              <label for="zoom">Lupe: <span class="kval" id="zoomOut">3</span>× Zoom</label>
+              <input type="range" id="zoom" min="1.5" max="8" step="0.5" value="3">
+            </div>
+          </div>
+          <label class="check" for="expo"><input type="checkbox" id="expo"> Belichtung und Weißabgleich ausgleichen</label>
+        </div>
+
+        <div class="field" id="kWrap">
+          <label for="k">Anzahl Farben: <span class="kval" id="kOut">7</span> <span class="kmode" id="kMode">automatisch</span></label>
+          <input type="range" id="k" min="2" max="16" value="7">
+          <div class="row"><button class="btn small" id="kAuto" type="button" hidden>Wieder automatisch</button></div>
+          <p class="hint">Der Rechner schätzt die Anzahl selbst. Schieb den Regler, wenn Fade oder Highlights fehlen (mehr) oder Kantenrauschen als eigene Farbe auftaucht (weniger).</p>
+        </div>
+      </section>
+
+      <section class="panel stack" aria-labelledby="h-pal">
+        <h2 id="h-pal">Farbkarten</h2>
+        <p class="note" id="palNote"></p>
+        <div class="sheetbox" id="sheetBox">
+          <p class="sheetline"><span class="dot" id="sheetDot"></span><span id="sheetText">Lade Farbkarten …</span></p>
+          <div class="row">
+            <button class="btn small" id="sheetAllow" type="button" hidden>Zugriff erlauben</button>
+            <button class="btn small" id="sheetReload" type="button">Neu laden</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lblBase">Farbart</span>
+          <div class="seg" role="group" aria-labelledby="lblBase">
+            <button class="btn" id="baseSolvent" aria-pressed="true" type="button">Ohne Waterbased</button>
+            <button class="btn" id="baseWater" aria-pressed="false" type="button">Mit Waterbased</button>
+          </div>
+          <p class="hint" id="baseHint"></p>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lblMatch">Dosen aussuchen</span>
+          <div class="seg" role="group" aria-labelledby="lblMatch">
+            <button class="btn" id="mOne" aria-pressed="true" type="button">Eine Marke</button>
+            <button class="btn" id="mMix" aria-pressed="false" type="button">Markenmix</button>
+          </div>
+          <p class="hint" id="matchHint"></p>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lblRole">Rollen</span>
+          <div class="seg" role="group" aria-labelledby="lblRole">
+            <button class="btn" id="roleSame" aria-pressed="true" type="button">Gleiche Dosen</button>
+            <button class="btn" id="roleSplit" aria-pressed="false" type="button">Nach Rolle trennen</button>
+          </div>
+          <p class="hint" id="roleHint"></p>
+        </div>
+        <div class="field">
+          <span class="lbl" id="lblPrice">Auswahl</span>
+          <div class="seg" role="group" aria-labelledby="lblPrice">
+            <button class="btn" id="pmColor" aria-pressed="true" type="button">Beste Farbe</button>
+            <button class="btn" id="pmBal" aria-pressed="false" type="button">Ausgewogen</button>
+            <button class="btn" id="pmCheap" aria-pressed="false" type="button">Möglichst günstig</button>
+          </div>
+          <p class="hint" id="priceHint"></p>
+        </div>
+        <div class="field" id="oneWrap"><label for="brandSel">Marke</label><select id="brandSel"></select></div>
+        <fieldset class="brandchecks" id="roleWrap" hidden><legend class="lbl">Marke pro Rolle</legend>
+          <p class="hint" style="margin:0 0 6px">Haken weg, wenn eine Rolle in deinem Piece nicht vorkommt. Ihre Farben zählen dann zu Outline bzw. Fill.</p>
+          <div class="rolegrid">
+            <input type="checkbox" id="roFill" data-ro="fill" checked disabled title="Fill ist immer dabei" aria-label="Rolle Fill im Piece"><label for="rbFill" data-rl="fill">Fill</label><select id="rbFill" data-rb="fill"></select>
+            <input type="checkbox" id="roBackground" data-ro="background" checked aria-label="Rolle Background im Piece"><label for="rbBackground" data-rl="background">Background</label><select id="rbBackground" data-rb="background"></select>
+            <input type="checkbox" id="roOutline" data-ro="outline" checked aria-label="Rolle Outline im Piece"><label for="rbOutline" data-rl="outline">Outline</label><select id="rbOutline" data-rb="outline"></select>
+            <input type="checkbox" id="roInline" data-ro="inline" checked aria-label="Rolle Inline im Piece"><label for="rbInline" data-rl="inline">Inline</label><select id="rbInline" data-rb="inline"></select>
+            <input type="checkbox" id="roBackline" data-ro="backline" checked aria-label="Rolle Backline im Piece"><label for="rbBackline" data-rl="backline">Backline</label><select id="rbBackline" data-rb="backline"></select>
+            <input type="checkbox" id="roHighlight" data-ro="highlight" checked aria-label="Rolle Highlights im Piece"><label for="rbHighlight" data-rl="highlight">Highlights</label><select id="rbHighlight" data-rb="highlight"></select>
+          </div>
+        </fieldset>
+        <fieldset class="brandchecks" id="mixWrap" hidden><legend class="lbl">Diese Marken mischen</legend><div id="mixList" class="row"></div>
+          <div class="row"><button class="btn small" id="mixDefault" type="button">Standardauswahl</button><button class="btn small" id="mixAll" type="button">Alle anhaken</button></div></fieldset>
+
+        <p class="status" id="palStatus" role="status"></p>
+      </section>
+    </div>
+
+    <div class="stack">
+      <div class="tiles" aria-live="polite">
+        <div class="tile hot"><b id="tColors">0</b><span>Farben</span></div>
+        <div class="tile"><b id="tCans">0</b><span>Dosen</span></div>
+        <div class="tile"><b id="tCost">–</b><span id="tCostLbl">Kosten ca.</span></div>
+      </div>
+
+      <section class="panel stack" aria-labelledby="h-list">
+        <div class="listhead">
+          <h2 id="h-list">Einkaufsliste</h2>
+          <button class="btn" id="copyBtn" type="button">Liste kopieren</button>
+        </div>
+        <div id="cans"></div>
+        <button class="btn small" id="listHowto" type="button" style="align-self:flex-start">So geht's: Warenkorb-Skript</button>
+        <p class="hint">Dose antippen, um unten Ersatz aus anderen Marken zu sehen. Mit − und + stellst du ein, wie viele Dosen du pro Farbe brauchst.</p>
+        <div class="addrow">
+          <input type="text" id="pieceName" placeholder="Name, z. B. Skizze Bahnhof" aria-label="Name für dieses Piece" maxlength="40">
+          <button class="btn primary" id="addBasket" type="button">In den Sammelkorb</button>
+          <button class="btn" id="addExtra" type="button">Weitere Dose hinzufügen</button>
+        </div>
+        <p class="status" id="copyStatus" role="status"></p>
+        <textarea class="copyfallback" id="copyFallback" readonly aria-label="Liste zum manuellen Kopieren"></textarea>
+      </section>
+
+      <section class="panel stack" aria-labelledby="h-basket" id="basket">
+        <div class="listhead">
+          <h2 id="h-basket">Sammelkorb</h2>
+          <button class="btn" id="basketCopy" type="button">Liste kopieren</button>
+        </div>
+        <details class="howto" id="howto">
+          <summary><span class="q">?</span>So geht's: Warenkorb-Skript in 6 Schritten<svg class="chev" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.5"/></svg></summary>
+          <div class="hbody">
+            <ol class="steps"><li><h4>Skript kopieren</h4><svg viewBox="0 0 240 130" aria-hidden="true"><rect class="pa" x="10" y="14" width="220" height="102" rx="10"/><rect class="ln" x="10" y="14" width="220" height="102" rx="10"/>
+<text x="22" y="38" font-weight="800" font-style="italic">DOUBLE A</text><text x="22" y="54" class="mu" style="fill:var(--muted)">7 Farben, 12 Dosen</text>
+<rect class="ac" x="62" y="70" width="158" height="28" rx="14"/><rect class="ln" x="62" y="70" width="158" height="28" rx="14"/><text x="141" y="88" class="wt" font-size="10.5" text-anchor="middle">Warenkorb-Skript kopieren</text>
+<g transform="translate(196,90)"><path class="ik" d="M0 0l0 16 4-4 3 7 3-1-3-7 6 0z"/></g></svg><p>Im Dosenzettel bei der Marke auf <b>„Warenkorb-Skript kopieren“</b> tippen, in der Einkaufsliste oder im Sammelkorb. <b>Pro Marke</b> gibt es ein eigenes Skript.</p></li><li><h4>Produktseite öffnen</h4><svg viewBox="0 0 240 130" aria-hidden="true"><rect class="pa" x="8" y="8" width="224" height="114" rx="8"/><rect class="ln" x="8" y="8" width="224" height="114" rx="8"/>
+<rect class="wl" x="8" y="8" width="224" height="20" rx="8"/><circle class="li" cx="20" cy="18" r="3"/><circle class="li" cx="30" cy="18" r="3"/><rect class="pa" x="42" y="12" width="182" height="12" rx="6"/><text x="48" y="21" class="mono" font-size="8.5">betterrun.shop/…/double-a-cans</text>
+<text x="18" y="44" font-weight="800">Double A Cans 400ml</text>
+<g><rect x="18" y="52" width="12" height="12" rx="2" style="fill:#f1ece2;stroke:var(--ink)"/><text x="36" y="62">DA136 Ivory</text><rect class="ln" x="178" y="51" width="40" height="14" rx="3"/><text x="194" y="62">0</text></g>
+<g><rect x="18" y="72" width="12" height="12" rx="2" style="fill:#2c6e4f;stroke:var(--ink)"/><text x="36" y="82">DA178 Emerald</text><rect class="ln" x="178" y="71" width="40" height="14" rx="3"/><text x="194" y="82">0</text></g>
+<g><rect x="18" y="92" width="12" height="12" rx="2" style="fill:#151515;stroke:var(--ink)"/><text x="36" y="102">DA100 Black</text><rect class="ln" x="178" y="91" width="40" height="14" rx="3"/><text x="194" y="102">0</text></g></svg><p>Bei <b>betterrun.shop</b> die <b>Seite der Marke mit allen Farben</b> öffnen, z. B. „Double A Cans 400ml“. Nicht die Seite einer einzelnen Farbe.</p></li><li><h4>Konsole öffnen</h4><svg viewBox="0 0 240 130" aria-hidden="true"><rect class="pa" x="8" y="8" width="224" height="114" rx="8"/><rect class="ln" x="8" y="8" width="224" height="114" rx="8"/>
+<rect class="wl" x="8" y="62" width="224" height="60"/><line x1="8" y1="62" x2="232" y2="62" class="ln"/>
+<text x="18" y="76" class="mu" style="fill:var(--muted)">Elemente</text><rect class="ac" x="66" y="66" width="52" height="15" rx="4"/><text x="72" y="77" class="wt">Konsole</text><text x="126" y="76" class="mu" style="fill:var(--muted)">Quellen</text>
+<text x="18" y="100" class="mono">&gt;</text><rect class="ik" x="28" y="91" width="2" height="12"/>
+<rect class="ln" x="20" y="18" width="34" height="22" rx="4"/><text x="27" y="33" class="mono" font-weight="700">F12</text>
+<text x="62" y="33" class="mu" style="fill:var(--muted)">oder</text><rect class="ln" x="88" y="18" width="104" height="22" rx="4"/><text x="95" y="33" class="mono" font-size="10">Strg+Shift+J</text>
+<text x="20" y="54" class="mu" style="fill:var(--muted)" font-size="10">Mac: Cmd+Option+J</text></svg><p><b>F12</b> drücken (oder <b>Strg+Shift+J</b>, am Mac <b>Cmd+Option+J</b>) und oben den Reiter <b>„Konsole“</b> bzw. <b>„Console“</b> wählen.</p></li><li><h4>Einfügen erlauben</h4><svg viewBox="0 0 240 130" aria-hidden="true"><rect class="wl" x="8" y="8" width="224" height="114" rx="8"/><rect class="ln" x="8" y="8" width="224" height="114" rx="8"/>
+<rect x="16" y="18" width="208" height="46" rx="6" style="fill:color-mix(in srgb,var(--warn) 18%,var(--panel));stroke:var(--warn);stroke-width:2"/>
+<text x="24" y="34" font-size="10">Warnung: Kein Code einfügen, den du</text><text x="24" y="47" font-size="10">nicht verstehst. Tipp „allow pasting“</text><text x="24" y="58" font-size="10" class="mu" style="fill:var(--muted)">(nur beim ersten Mal)</text>
+<text x="18" y="88" class="mono">&gt; allow pasting</text><rect class="ik" x="122" y="79" width="2" height="12"/>
+<rect class="ln" x="168" y="96" width="52" height="18" rx="4"/><text x="194" y="109" class="mono" font-size="10" text-anchor="middle">Enter</text></svg><p><b>Nur beim ersten Mal:</b> Chrome warnt vor dem Einfügen. Tipp <b>allow pasting</b> ein und drück <b>Enter</b>. Danach geht es ohne.</p></li><li><h4>Einfügen und Enter</h4><svg viewBox="0 0 240 130" aria-hidden="true"><rect class="wl" x="8" y="8" width="224" height="114" rx="8"/><rect class="ln" x="8" y="8" width="224" height="114" rx="8"/>
+<text x="18" y="28" class="mono" font-size="9">&gt; // Dosenzettel: Double A …</text><text x="18" y="40" class="mono" font-size="9">  (function(){ …</text>
+<text x="18" y="62" class="mono" font-size="9" style="fill:var(--good)">12 Dosen, ca. 49,20 EUR.</text><text x="18" y="74" class="mono" font-size="9" style="fill:var(--good)">Prüf unten 'Deine Auswahl'.</text>
+<rect class="ln" x="18" y="92" width="62" height="20" rx="4"/><text x="25" y="106" class="mono" font-size="10">Strg+V</text><text x="88" y="106">dann</text><rect class="ln" x="116" y="92" width="52" height="20" rx="4"/><text x="142" y="106" class="mono" font-size="10" text-anchor="middle">Enter</text></svg><p>Skript mit <b>Strg+V (Mac: Cmd+V)</b> einfügen und <b>Enter</b> drücken. Das Skript klappt alle Farben auf und <b>trägt deine Mengen ein</b>. In der Konsole steht, wie viele Dosen es waren und ob etwas fehlt.</p></li><li><h4>Prüfen und bestellen</h4><svg viewBox="0 0 240 130" aria-hidden="true"><rect class="pa" x="8" y="8" width="224" height="114" rx="8"/><rect class="ln" x="8" y="8" width="224" height="114" rx="8"/>
+<g><rect x="18" y="18" width="12" height="12" rx="2" style="fill:#f1ece2;stroke:var(--ink)"/><text x="36" y="28">DA136 Ivory</text><rect class="ln" x="178" y="17" width="40" height="14" rx="3"/><text x="194" y="28" font-weight="800">2</text></g>
+<g><rect x="18" y="38" width="12" height="12" rx="2" style="fill:#2c6e4f;stroke:var(--ink)"/><text x="36" y="48">DA178 Emerald</text><rect class="ln" x="178" y="37" width="40" height="14" rx="3"/><text x="194" y="48" font-weight="800">4</text></g>
+<g><rect x="18" y="58" width="12" height="12" rx="2" style="fill:#151515;stroke:var(--ink)"/><text x="36" y="68">DA100 Black</text><rect class="ln" x="178" y="57" width="40" height="14" rx="3"/><text x="194" y="68" font-weight="800">6</text></g>
+<line x1="18" y1="80" x2="222" y2="80" class="ln" style="stroke:var(--line)"/><text x="18" y="96" font-weight="800">Deine Auswahl: 12 Stück</text>
+<rect class="ac" x="100" y="99" width="120" height="20" rx="10"/><text x="160" y="113" class="wt" font-size="10" text-anchor="middle">In den Warenkorb</text>
+<g transform="translate(200,108)"><path class="ik" d="M0 0l0 16 4-4 3 7 3-1-3-7 6 0z"/></g></svg><p>Konsole schließen, unter <b>„Deine Auswahl“</b> die Mengen prüfen und selbst auf <b>„In den Warenkorb“</b> klicken. Dann die nächste Marke.</p></li></ol>
+            <p class="warn"><b>Nur am Computer:</b> Am Handy gibt es keine Konsole. Das Skript <b>legt nichts selbst in den Warenkorb</b> und sieht keine Daten von dir, es tippt nur die Mengen in die Felder der Seite. Fehlt eine Farbe im Shop, steht das in der Konsole.</p>
+          </div>
+        </details>
+        <div class="pieces" id="pieces"></div>
+        <div id="basketBody"></div>
+        <div class="row"><button class="btn" id="basketClear" type="button">Sammelkorb leeren</button></div>
+        <p class="hint">Gleiche Dosen aus verschiedenen Pieces werden zusammengezählt, und jede Marke landet in einem Warenkorb-Skript. Die Staffel zählt über alle Farben einer Marke, ein Rack sind 6 Dosen. Die Mengen stellst du hier ein. Der Sammelkorb bleibt in diesem Browser gespeichert.</p>
+        <p class="status" id="basketStatus" role="status"></p>
+        <textarea class="copyfallback" id="basketFallback" readonly aria-label="Text zum manuellen Kopieren"></textarea>
+      </section>
+
+      <section class="panel stack" aria-labelledby="h-colors">
+        <h2 id="h-colors">Farben aus dem Bild</h2>
+        <div class="tablewrap">
+          <table>
+            <thead><tr>
+              <th>Malen</th><th id="thRole" hidden>Für</th><th>Bild → Dose</th><th>Dose und Ersatz</th><th>Treffer</th><th class="num">Anteil</th><th>Menge</th>
+            </tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <p class="hint">Der Hintergrund (Papier oder Wand am Bildrand) wird automatisch erkannt und nicht mitgerechnet. Hak ihn an, wenn du ihn malen willst. Fallen zwei Bildfarben auf dieselbe Dose, werden sie in der Einkaufsliste zusammengezählt. Bei „Nach Rolle trennen“ schätzt der Rechner die Rolle jeder Farbe: große Flächen sind Fill, der Hintergrund ist Background, dünne Linien und kleine Flächen sind Outline, helle davon Highlights. Inline und Backline stellst du selbst über das Auswahlfeld in der Spalte „Für“ ein.</p>
+      </section>
+
+      <section class="panel stack" aria-labelledby="h-finder" id="finder">
+        <h2 id="h-finder">Ersatz finden</h2>
+        <p class="hint">Deine Farbe ist im Shop aus? Tipp in der Einkaufsliste auf die Dose oder wähl sie hier. Dann kannst du sie gegen eine Dose einer anderen Marke tauschen oder jede Dose als zusätzliche Farbe in die Einkaufsliste legen.</p>
+        <p class="hint" id="finderScope"></p>
+        <div id="finderCtx"></div>
+        <div class="fields">
+          <div class="field"><label for="fBrand">Marke</label><select id="fBrand"></select></div>
+          <div class="field"><label for="fCan">Dose</label><select id="fCan"></select></div>
+        </div>
+        <div id="finderOut" class="stack"></div>
+        <p class="status" id="finderStatus" role="status"></p>
+        <p class="note">Bildschirm- und Fotofarben weichen von echter Farbe ab, und Hex-Werte der Hersteller sind auch nur Annäherungen. Prüf Ersatz vor dem Kauf am Farbfächer oder an echten Swatches.</p>
+      </section>
+    </div>
+  </div>
+  <section class="panel stack privacy" id="datenschutz" aria-labelledby="h-privacy">
+    <h2 id="h-privacy">Deine Daten bleiben bei dir</h2>
+    <ul>
+      <li><b>Bilder:</b> Die Farberkennung läuft komplett in deinem Browser. Fotos und Skizzen werden nicht hochgeladen, nicht verschickt und nirgends gespeichert. Lädst du die Seite neu, ist das Bild weg.</li>
+      <li><b>Sammelkorb, Kombis, Einstellungen:</b> Die liegen nur im Speicher dieses Browsers auf deinem Gerät. Niemand sonst sieht sie. Löschst du die Browserdaten, sind sie weg.</li>
+      <li><b>Kein Konto, kein Login, kein Tracking.</b> Der Dosenzettel weiß nicht, wer du bist.</li>
+      <li><b>Was geladen wird:</b> nur die Farbkarten und Preise der Marken und die Schriften. Bilder, Listen oder Kombis von dir werden dabei nicht mitgeschickt.</li>
+      <li><b>Warenkorb:</b> Das Skript führst du selbst im Shop aus. Der Dosenzettel schickt nichts an den Shop.</li>
+    </ul>
+  </section>
+  <section class="panel feedback" aria-labelledby="h-feedback">
+    <div class="stack" style="gap:8px">
+      <h2 id="h-feedback">Ideen? Feedback? Her damit.</h2>
+      <p>Der Dosenzettel ist von Writern für Writer und wird mit eurem Input besser. Fehlt dir eine Marke oder ein Shop, passt eine Farbe nicht, nervt irgendwas oder hast du eine Idee? Ich bin für jede Anregung dankbar.</p>
+    </div>
+    <a class="btn primary" id="feedbackBtn" hidden>Feedback schreiben</a>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const nf1 = new Intl.NumberFormat("de-DE",{maximumFractionDigits:1,minimumFractionDigits:1});
+const nf0 = new Intl.NumberFormat("de-DE",{maximumFractionDigits:0});
+const esc = s => String(s).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+
+/* ---------- Farbmathematik ---------- */
+function srgbToLab(r,g,b){
+  const f=c=>{c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4)};
+  const R=f(r),G=f(g),B=f(b);
+  let x=(R*0.4124564+G*0.3575761+B*0.1804375)/0.95047;
+  let y=(R*0.2126729+G*0.7151522+B*0.0721750);
+  let z=(R*0.0193339+G*0.1191920+B*0.9503041)/1.08883;
+  const t=v=>v>0.008856?Math.cbrt(v):(7.787*v+16/116);
+  x=t(x);y=t(y);z=t(z);
+  return [116*y-16,500*(x-y),200*(y-z)];
+}
+function labToRgb(L,a,b){
+  let y=(L+16)/116, x=a/500+y, z=y-b/200;
+  const f=t=>{const t3=t*t*t;return t3>0.008856?t3:(t-16/116)/7.787};
+  x=f(x)*0.95047; y=f(y); z=f(z)*1.08883;
+  const r=x*3.2404542-y*1.5371385-z*0.4985314, g=-x*0.9692660+y*1.8760108+z*0.0415560, bb=x*0.0556434-y*0.2040259+z*1.0572252;
+  const gm=c=>{c=c<=0.0031308?12.92*c:1.055*Math.pow(c,1/2.4)-0.055;return Math.max(0,Math.min(255,Math.round(c*255)))};
+  return [gm(r),gm(g),gm(bb)];
+}
+const rad=d=>d*Math.PI/180, cosd=d=>Math.cos(rad(d));
+function de2000(L1,a1,b1,L2,a2,b2){
+  const avgL=(L1+L2)/2, c1=Math.hypot(a1,b1), c2=Math.hypot(a2,b2), avgC=(c1+c2)/2, p7=Math.pow(25,7);
+  const g=0.5*(1-Math.sqrt(Math.pow(avgC,7)/(Math.pow(avgC,7)+p7)));
+  const a1p=a1*(1+g), a2p=a2*(1+g), c1p=Math.hypot(a1p,b1), c2p=Math.hypot(a2p,b2), avgCp=(c1p+c2p)/2;
+  const hue=(b,a)=>{if(a===0&&b===0)return 0;let h=Math.atan2(b,a)*180/Math.PI;return h<0?h+360:h};
+  const h1p=hue(b1,a1p), h2p=hue(b2,a2p);
+  let dhp=0; if(c1p*c2p!==0){dhp=h2p-h1p;if(dhp>180)dhp-=360;else if(dhp<-180)dhp+=360;}
+  const dLp=L2-L1, dCp=c2p-c1p, dHp=2*Math.sqrt(c1p*c2p)*Math.sin(rad(dhp)/2);
+  let avgHp;
+  if(c1p*c2p===0)avgHp=h1p+h2p; else if(Math.abs(h1p-h2p)<=180)avgHp=(h1p+h2p)/2; else avgHp=(h1p+h2p<360)?(h1p+h2p+360)/2:(h1p+h2p-360)/2;
+  const T=1-0.17*cosd(avgHp-30)+0.24*cosd(2*avgHp)+0.32*cosd(3*avgHp+6)-0.20*cosd(4*avgHp-63);
+  const dTheta=30*Math.exp(-Math.pow((avgHp-275)/25,2)), Rc=2*Math.sqrt(Math.pow(avgCp,7)/(Math.pow(avgCp,7)+p7));
+  const Sl=1+(0.015*Math.pow(avgL-50,2))/Math.sqrt(20+Math.pow(avgL-50,2)), Sc=1+0.045*avgCp, Sh=1+0.015*avgCp*T, Rt=-Math.sin(rad(2*dTheta))*Rc;
+  return Math.sqrt(Math.pow(dLp/Sl,2)+Math.pow(dCp/Sc,2)+Math.pow(dHp/Sh,2)+Rt*(dCp/Sc)*(dHp/Sh));
+}
+const deLab=(x,y)=>de2000(x[0],x[1],x[2],y[0],y[1],y[2]);
+const hexToRgb=h=>{h=h.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]};
+const rgbToHex=(r,g,b)=>"#"+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,"0")).join("");
+function rng(seed){return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
+
+
+/* Double A 400ml, 140 Farben: Werte aus den Farbfeldern von betterrun.shop (vom Shop gepflegt), Code = Bestellnummer */
+const BUILTIN_DA=[];
+/* Loop 400ml: Werte aus den Farbfeldern von betterrun.shop, 5. Feld = Bestellnummer im Shop */
+const BUILTIN_LOOP=[];
+const BUILTIN=[...BUILTIN_DA,...BUILTIN_LOOP];
+/* ---------- Farbkarten-Verwaltung ---------- */
+const STORE="dosenrechner.palette.v2", STORE_BRAND="dosenrechner.brand.v2";
+const STORE_MATCH="dosenrechner.match.v2";
+/* Marken-Infos: Basis (Wasser/Lösemittel) und Vorauswahl im Markenmix. Kommen aus dem Sheet-Tab „Marken“, das hier ist der Rückfall. */
+/* [wasserbasiert, im Markenmix vorausgewählt, Druck] */
+const DEFAULT_META={};
+let brandMeta=new Map(Object.entries(DEFAULT_META).map(([b,[w,d,p]])=>[b,{water:!!w,mix:!!d,pressure:p}]));
+function parsePressure(v){ v=String(v||"").trim().toLowerCase(); return /^(high|hoch|hp)/.test(v)?"high":/^(low|niedrig|lp)/.test(v)?"low":/^(mid|medium|mittel)/.test(v)?"mid":null; }
+function pressureOf(b){ const m=brandMeta.get(b); return m&&m.pressure||null; }
+const PR_LABEL={high:"High",mid:"Medium",low:"Low"};
+const prSuffix=b=>{ const p=pressureOf(b); return p?" ("+PR_LABEL[p]+")":""; };
+/* Fill: High und Medium. Outline & Details: Low und Medium. Ohne Angabe: beides. */
+/* Fill und Background: High Pressure. Outline, Inline, Backline, Highlights: feiner, Low Pressure. Medium passt überall. */
+const ROLES=["fill","background","outline","inline","backline","highlight"], ROLE_LABEL={fill:"Fill",background:"Background",outline:"Outline",inline:"Inline",backline:"Backline",highlight:"Highlights"};
+const HIGH_ROLES=new Set(["fill","background"]);
+const isRoleOn=r=>r==="fill"||!roleOff[r];
+function activeRoles(){ return splitRoles?ROLES.filter(isRoleOn):ROLES; }
+/* Abgewählte Rolle: dünne Linien gehen zu Outline, alles andere zu Fill */
+function fallbackRole(r){ if(!splitRoles||isRoleOn(r)) return r; if(["inline","backline","highlight"].includes(r)&&isRoleOn("outline")) return "outline"; return "fill"; }
+function pressureOk(b,role){ const p=pressureOf(b); if(!p) return true; return HIGH_ROLES.has(role)?p!=="low":p!=="high"; }
+let palette=[], paletteIsDemo=false, brands=[], matchBrand="", matchMode="one", mixPick={}, baseMode="solvent", splitRoles=false, roleOne={}, roleMix={}, roleOff={}, priceMode="color";
+try{
+  const m=JSON.parse(localStorage.getItem(STORE_MATCH)||"null");
+  if(m){ matchMode=m.mode==="mix"?"mix":"one"; matchBrand=m.brand||""; mixPick=(m.mix&&typeof m.mix==="object")?m.mix:{}; baseMode=m.base==="water"?"water":"solvent"; splitRoles=!!m.split; roleOne=(m.r1&&typeof m.r1==="object")?m.r1:{}; roleMix=(m.rm&&typeof m.rm==="object")?m.rm:{}; priceMode=["color","bal","cheap"].includes(m.pm)?m.pm:"color"; roleOff=(m.ro&&typeof m.ro==="object")?m.ro:{}; }
+}catch(e){}
+function saveMatch(){ try{ localStorage.setItem(STORE_MATCH,JSON.stringify({mode:matchMode,brand:matchBrand,mix:mixPick,base:baseMode,split:splitRoles,r1:roleOne,rm:roleMix,pm:priceMode,ro:roleOff})); }catch(e){} }
+function isWater(b){ const m=brandMeta.get(b); return m?m.water:/water\s*based|coversall/i.test(b); }
+function mixDefault(b){ const m=brandMeta.get(b); return m?m.mix:!brands.some(x=>brandMeta.has(x)); }
+function baseAllowed(b){ return (baseMode==="water")===isWater(b); }
+function visibleBrands(){ const v=brands.filter(baseAllowed); return v.length?v:brands; }
+function renderBrandLists(){
+  const vis=visibleBrands();
+  if(!vis.includes(matchBrand)) matchBrand=vis[0]||"";
+  const lowDef=vis.find(b=>pressureOf(b)==="low"&&mixDefault(b))||vis.find(b=>pressureOf(b)==="low")||vis[0]||"";
+  if(!vis.includes(roleOne.fill)) roleOne.fill=matchBrand;
+  if(!vis.includes(roleOne.outline)) roleOne.outline=lowDef;
+  if(!vis.includes(roleOne.highlight)) roleOne.highlight=roleOne.outline;
+  if(!vis.includes(roleOne.background)) roleOne.background=roleOne.fill;
+  if(!vis.includes(roleOne.inline)) roleOne.inline=roleOne.outline;
+  if(!vis.includes(roleOne.backline)) roleOne.backline=roleOne.outline;
+  ROLES.forEach(r=>{ if(roleMix[r]&&!vis.includes(roleMix[r])) roleMix[r]=""; });
+  const opt=b=>'<option value="'+esc(b)+'">'+esc(b+prSuffix(b))+'</option>';
+  if(typeof renderCanList==="function"&&$("canList")) try{ renderCanList(); }catch(e){}
+  $("brandSel").innerHTML=vis.map(opt).join("");
+  $("brandSel").value=matchBrand;
+  ROLES.forEach(r=>{
+    const el=$("rb"+r[0].toUpperCase()+r.slice(1));
+    el.innerHTML=(matchMode==="mix"?'<option value="">Automatisch nach Druck</option>':'')+vis.map(opt).join("");
+    el.value=matchMode==="mix"?(roleMix[r]||""):roleOne[r];
+  });
+  $("mixList").innerHTML=vis.map((b,i)=>'<label class="check" for="mix'+i+'"><input type="checkbox" id="mix'+i+'" data-brand="'+esc(b)+'"'+(mixAllowed(b)?" checked":"")+'> '+esc(b)+(pressureOf(b)?' <span class="prtag">'+PR_LABEL[pressureOf(b)]+'</span>':'')+'</label>').join("");
+  $("baseSolvent").setAttribute("aria-pressed",baseMode==="solvent"); $("baseWater").setAttribute("aria-pressed",baseMode==="water");
+  const wb=brands.filter(isWater);
+  $("baseHint").textContent=(baseMode==="water"&&!wb.length)?"Keine Marke ist als wasserbasiert markiert."
+    :(baseMode==="water"?"Nur wasserbasierte Marken: ":"Ausgeblendet, weil wasserbasiert: ")+(wb.length?wb.join(", "):"keine")+".";
+}
+function renderMatchUi(){
+  $("mOne").setAttribute("aria-pressed",matchMode==="one");
+  $("mMix").setAttribute("aria-pressed",matchMode==="mix");
+  $("oneWrap").hidden=matchMode!=="one";
+  $("mixWrap").hidden=matchMode!=="mix";
+  $("matchHint").textContent = matchMode==="one"
+    ? "Alles von einer Marke. Einfacher im Laden, dafür sitzt nicht jede Farbe ganz genau."
+    : "Pro Farbe der beste Treffer aus den Marken, die du anhakst. Am nächsten am Bild, dafür kaufst du bei mehreren Marken ein.";
+  if(matchMode==="mix" && brands.length<2) $("matchHint").textContent+=" Dafür brauchst du mindestens zwei Marken.";
+  $("roleSame").setAttribute("aria-pressed",!splitRoles); $("roleSplit").setAttribute("aria-pressed",splitRoles);
+  $("pmColor").setAttribute("aria-pressed",priceMode==="color"); $("pmBal").setAttribute("aria-pressed",priceMode==="bal"); $("pmCheap").setAttribute("aria-pressed",priceMode==="cheap");
+  $("priceHint").textContent=priceMode==="color"?"Immer die Dose, die am nächsten an der Bildfarbe ist."
+    : (priceMode==="bal"?"Nimmt eine günstigere Dose, wenn sie fast gleich trifft (höchstens 10 % schlechter). Farbe zählt mehr als ein paar Cent."
+      :"Nimmt die günstigste Dose, die noch ähnlich ist (höchstens 24 % schlechter), und bündelt Farben bei einer Marke, damit Staffelpreise greifen. Der Sammelkorb wird mitgerechnet.")
+    +(matchMode==="one"&&priceMode!=="color"?" Wirkt nur im Markenmix oder bei „Automatisch nach Druck“, weil sonst die Marke fest ist.":"");
+  $("roleWrap").hidden=!splitRoles;
+  ROLES.forEach(r=>{ const C=r[0].toUpperCase()+r.slice(1), on=isRoleOn(r); $("ro"+C).checked=on; $("rb"+C).disabled=!on; $("rb"+C).classList.toggle("off",!on); document.querySelector('[data-rl="'+r+'"]').classList.toggle("off",!on); });
+  $("oneWrap").hidden=matchMode!=="one"||splitRoles;
+  $("thRole").hidden=!splitRoles;
+  $("roleHint").textContent=!splitRoles
+    ? "Jede Farbe bekommt die Dose, die am besten passt, egal wie viel Druck sie hat."
+    : (matchMode==="one"
+      ? "Für jede Rolle eine Marke. Üblich: High Pressure für Fill und Background, Low Pressure für Outline, Inline, Backline und Highlights."
+      : "Pro Rolle entweder eine feste Marke oder automatisch: Fill und Background aus den angehakten High- und Medium-Marken, Outline, Inline, Backline und Highlights aus Low und Medium.");
+}
+function mixAllowed(b){ return Object.prototype.hasOwnProperty.call(mixPick,b)?!!mixPick[b]:mixDefault(b); }
+function setPalette(list,isDemo){
+  palette=list.map(([brand,code,name,hex,order,price],i)=>{const rgb=hexToRgb(hex);return {i,brand,code,name,order:order||code,price:(typeof price==="number"&&price>0)?price:null,hex:rgbToHex(...rgb),lab:srgbToLab(...rgb)}});
+  paletteIsDemo=isDemo;
+  brands=[...new Set(palette.map(p=>p.brand))];
+  $("palNote").textContent = isDemo
+    ? "Aktuell: drei erfundene Demo-Marken mit Platzhalterfarben, nur zum Ausprobieren der Ersatzsuche."
+    : brands.length+" Marke"+(brands.length>1?"n":"")+" mit zusammen "+palette.length+" Dosen: "+brands.join(", ")+". Die Werte stammen aus den Farbfeldern der Shops und sind Annäherungen."+(brands.length<2?" Für Ersatz braucht es mindestens zwei Marken.":"");
+  renderBrandLists();
+  renderMatchUi();
+  finderKey=""; syncFinderBrands();
+}
+let finderKey="";
+function syncFinderBrands(){
+  const list=finderBrands(), key=list.join("|"); if(key===finderKey) return false; finderKey=key;
+  const cur=$("fBrand").value;
+  $("fBrand").innerHTML=list.map(b=>'<option value="'+esc(b)+'">'+esc(b)+'</option>').join("");
+  $("fBrand").value=list.includes(cur)?cur:list[0]||"";
+  if($("fBrand").value!==cur) fillFinderCans($("fBrand").value);
+  const one=matchMode==="one", few=list.length<visibleBrands().length;
+  $("finderScope").textContent=few?"Ersatz aus deiner Auswahl oben: "+list.join(", ")+".":(one?"Bei einer einzelnen Marke zeigt die Suche Ersatz aus allen Marken.":"Ersatz aus allen Marken.");
+  return true;
+}
+let sheetRows=null; // Zeilen aus dem Google Sheet: [Marke, Code, Bestellnummer, Name, Hex, Quelle, Hinweis, Farbfeld, Preis, Preis Stand]
+const HEXRE=/^#?[0-9a-fA-F]{6}$/;
+function sheetPalette(){ return (sheetRows||[]).filter(r=>r[0]&&r[1]&&HEXRE.test(r[4]||"")).map(r=>[r[0],r[1],r[3]||r[1],r[4].startsWith("#")?r[4]:"#"+r[4],r[2]||r[1],parsePrice(r[8])]); }
+function composePalette(){ const sp=sheetPalette(); return sp.length?sp:BUILTIN; }
+function save(){ try{ localStorage.removeItem(STORE); localStorage.setItem(STORE_BRAND,matchBrand);}catch(e){} }
+function parsePrice(v){
+  if(typeof v==="number") return isFinite(v)&&v>0?v:null;
+  let t=String(v==null?"":v).replace(/[€\s]/g,""); if(!t) return null;
+  if(/,\d{1,2}$/.test(t)) t=t.replace(/\./g,"").replace(",","."); else t=t.replace(/,/g,"");
+  const n=parseFloat(t); return isFinite(n)&&n>0?n:null;
+}
+const eur=n=>new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR"}).format(n);
+try{
+  if(!matchBrand){ const old=localStorage.getItem(STORE_BRAND)||""; if(old==="*") matchMode="mix"; else matchBrand=old; }
+  setPalette(composePalette(),false);
+}catch(e){ setPalette(composePalette(),false); }
+
+function nearest(lab,filter,n){
+  const out=[];
+  for(const p of palette){ if(filter&&!filter(p)) continue; out.push({p,de:deLab(lab,p.lab)}); }
+  out.sort((a,b)=>a.de-b.de); return out.slice(0,n);
+}
+/* Marken für „Ersatz finden“: dieselbe Auswahl wie oben (Markenmix-Haken bzw. Marken pro Rolle) */
+function finderBrands(){
+  const vis=visibleBrands(), sel=[];
+  const add=b=>{ if(b&&vis.includes(b)&&!sel.includes(b)) sel.push(b); };
+  if(matchMode==="mix"){ vis.filter(mixAllowed).forEach(add); if(splitRoles) ROLES.forEach(r=>add(roleMix[r])); }
+  else{ add(matchBrand); if(splitRoles) ROLES.forEach(r=>add(roleOne[r])); }
+  return sel.length>1?sel:vis;
+}
+function substitutes(p,perBrand){
+  const allowed=finderBrands();
+  return allowed.filter(b=>b!==p.brand).map(b=>({brand:b,list:nearest(p.lab,q=>q.brand===b,perBrand)})).filter(x=>x.list.length)
+    .sort((a,b)=>a.list[0].de-b.list[0].de);
+}
+/* Nächste Dose je anderer Marke, gemessen an der Farbe aus dem Bild (nicht an der gewählten Dose) */
+function imageSubs(lab,exceptBrand,role){
+  return brands.filter(b=>b!==exceptBrand&&baseAllowed(b)&&(!splitRoles||!role||pressureOk(b,role))).map(b=>nearest(lab,q=>q.brand===b,1)[0]).filter(Boolean).sort((a,b)=>a.de-b.de);
+}
+function deClass(d){return d<=2.5?["good","sehr nah"]:d<=6?["warn","ähnlich"]:["bad","weit weg"]}
+/* Ähnlichkeit in Prozent: 100 % = gleiche Farbe, pro ΔE-2000-Punkt 4 % weniger, ab ΔE 25 = 0 % */
+const simPct=d=>Math.max(0,Math.round(100-4*d));
+const deChip=d=>{const [c,l]=deClass(d);return '<span class="de '+c+'" title="Farbabstand ΔE 2000: '+nf1.format(d)+'">'+l+' · '+simPct(d)+' %</span>'};
+
+/* ---------- Bild-Pipeline ---------- */
+let base=null, crop=null, img=null, imgData=null, px=null, clusters=[], assign=null, view="orig", mode="sketch", how="auto", autoK=true, picks=[], isDemo=true;
+
+function buildImage(){
+  let src=base;
+  if(crop){ const c=document.createElement("canvas"); c.width=crop.w; c.height=crop.h; c.getContext("2d").drawImage(base,crop.x,crop.y,crop.w,crop.h,0,0,crop.w,crop.h); src=c; }
+  if($("expo").checked){
+    const c=document.createElement("canvas"); c.width=src.width; c.height=src.height;
+    const ctx=c.getContext("2d"); ctx.drawImage(src,0,0);
+    const id=ctx.getImageData(0,0,c.width,c.height), d=id.data, n=d.length/4;
+    const hist=[new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
+    for(let i=0;i<n;i++){ if(d[i*4+3]<128) continue; hist[0][d[i*4]]++; hist[1][d[i*4+1]]++; hist[2][d[i*4+2]]++; }
+    const pct=(h,q)=>{let tot=0;for(const v of h)tot+=v;let acc=0,lim=tot*q;for(let v=0;v<256;v++){acc+=h[v];if(acc>=lim)return v;}return 255};
+    const lo=hist.map(h=>pct(h,.005)), hi=hist.map(h=>pct(h,.99));
+    const blk=Math.min(...lo,40);
+    const sc=hi.map(v=>Math.min(1.8,255/Math.max(40,v-blk)));
+    for(let i=0;i<n;i++) for(let ch=0;ch<3;ch++){ const v=(d[i*4+ch]-blk)*sc[ch]; d[i*4+ch]=v<0?0:v>255?255:v; }
+    ctx.putImageData(id,0,0); src=c;
+  }
+  img=src; px=sampleImage(src); imgData=src.getContext("2d").getImageData(0,0,src.width,src.height);
+  if(masks.length && masks[masks.length-1].length===px.w*px.h) applyMask(); else masks=[];
+  $("uncropBtn").hidden=!crop; updateWandUi();
+  analyze();
+}
+function sampleImage(source){
+  const max=220, s=Math.min(1,max/Math.max(source.width,source.height));
+  const w=Math.max(1,Math.round(source.width*s)), h=Math.max(1,Math.round(source.height*s));
+  const c=document.createElement("canvas"); c.width=w; c.height=h;
+  const ctx=c.getContext("2d"); ctx.drawImage(source,0,0,w,h);
+  const d=ctx.getImageData(0,0,w,h).data, n=w*h;
+  const lab=new Float32Array(n*3), rgb=new Uint8Array(n*3), valid=new Uint8Array(n), border=new Uint8Array(n);
+  for(let i=0;i<n;i++){
+    const r=d[i*4],g=d[i*4+1],b=d[i*4+2];
+    rgb[i*3]=r;rgb[i*3+1]=g;rgb[i*3+2]=b;
+    if(d[i*4+3]<128) continue;
+    valid[i]=1; const L=srgbToLab(r,g,b); lab[i*3]=L[0];lab[i*3+1]=L[1];lab[i*3+2]=L[2];
+    const x=i%w,y=(i/w)|0; if(x<2||y<2||x>=w-2||y>=h-2) border[i]=1;
+  }
+  return {w,h,lab,rgb,valid,valid0:valid.slice(),border};
+}
+function kmeans(p,k){
+  const n=p.w*p.h, idx=[]; for(let i=0;i<n;i++) if(p.valid[i]) idx.push(i);
+  const m=idx.length, as=new Int16Array(n).fill(-1); if(!m) return {centers:[],assign:as};
+  k=Math.min(k,m);
+  const L=p.lab, rand=rng(42), C=[];
+  const d2=(i,c)=>{const a=L[i*3]-c[0],b=L[i*3+1]-c[1],e=L[i*3+2]-c[2];return a*a+b*b+e*e};
+  const f=idx[(rand()*m)|0]; C.push([L[f*3],L[f*3+1],L[f*3+2]]);
+  const dist=new Float64Array(m).fill(Infinity);
+  while(C.length<k){
+    let sum=0; const c=C[C.length-1];
+    for(let j=0;j<m;j++){const v=d2(idx[j],c); if(v<dist[j]) dist[j]=v; sum+=dist[j];}
+    let r=rand()*sum, pick=idx[m-1];
+    for(let j=0;j<m;j++){r-=dist[j]; if(r<=0){pick=idx[j];break;}}
+    C.push([L[pick*3],L[pick*3+1],L[pick*3+2]]);
+  }
+  for(let it=0;it<16;it++){
+    const s=C.map(()=>[0,0,0,0]); let moved=0;
+    for(const i of idx){
+      let best=0,bv=Infinity; for(let c=0;c<C.length;c++){const v=d2(i,C[c]); if(v<bv){bv=v;best=c;}}
+      if(as[i]!==best){as[i]=best;moved++;}
+      const t=s[best]; t[0]+=L[i*3];t[1]+=L[i*3+1];t[2]+=L[i*3+2];t[3]++;
+    }
+    C.forEach((c,ci)=>{const t=s[ci]; if(t[3]){c[0]=t[0]/t[3];c[1]=t[1]/t[3];c[2]=t[2]/t[3];}});
+    if(moved<m*0.002) break;
+  }
+  return {centers:C,assign:as};
+}
+/* Automatische Farbanzahl: viele Cluster bilden, dann nahe beieinander liegende zusammenlegen */
+function autoKmeans(p){
+  const res=kmeans(p,14), n=p.w*p.h, C=res.centers.map(c=>c.slice()), as=res.assign;
+  const cnt=new Array(C.length).fill(0); let valid=0;
+  for(let i=0;i<n;i++) if(as[i]>=0){cnt[as[i]]++;valid++;}
+  const alive=C.map((c,i)=>cnt[i]>0), parent=C.map((c,i)=>i);
+  const d=(a,b)=>Math.hypot(C[a][0]-C[b][0],C[a][1]-C[b][1],C[a][2]-C[b][2]);
+  const merge=(a,b)=>{ const t=cnt[a]+cnt[b]; for(let k=0;k<3;k++) C[a][k]=(C[a][k]*cnt[a]+C[b][k]*cnt[b])/t; cnt[a]=t; cnt[b]=0; alive[b]=false; parent.forEach((p,i)=>{ if(p===b) parent[i]=a; }); };
+  for(;;){ // nahe Farben zusammenlegen
+    let best=null,bd=10;
+    for(let a=0;a<C.length;a++) if(alive[a]) for(let b=a+1;b<C.length;b++) if(alive[b]){ const v=d(a,b); if(v<bd){bd=v;best=[a,b];} }
+    if(!best) break; merge(...best);
+  }
+  for(;;){ // winzige Reste (Kantenrauschen) in den nächsten Nachbarn
+    let small=-1; for(let a=0;a<C.length;a++) if(alive[a]&&cnt[a]<valid*0.008&&(small<0||cnt[a]<cnt[small])) small=a;
+    if(small<0||alive.filter(Boolean).length<=2) break;
+    let nb=-1,nd=Infinity; for(let b=0;b<C.length;b++) if(alive[b]&&b!==small){ const v=d(small,b); if(v<nd){nd=v;nb=b;} }
+    merge(nb,small);
+  }
+  const out=new Int16Array(n).fill(-1);
+  for(let i=0;i<n;i++) if(as[i]>=0) out[i]=parent[as[i]];
+  return {centers:C,assign:out};
+}
+/* Fill oder Outline/Details schätzen: dünne Linien und kleine Flächen haben fast nur Randpixel */
+function estimateRoles(){
+  const W=px.w,H=px.h,n=W*H, tot=clusters.map(()=>0), edge=clusters.map(()=>0);
+  for(let i=0;i<n;i++){
+    const a=assign[i]; if(a<0) continue; tot[a]++;
+    const x=i%W, y=(i/W)|0;
+    if((x>0&&assign[i-1]!==a)||(x<W-1&&assign[i+1]!==a)||(y>0&&assign[i-W]!==a)||(y<H-1&&assign[i+W]!==a)) edge[a]++;
+  }
+  clusters.forEach((c,k)=>{ if(c.extra) return; c.edge=tot[k]?edge[k]/tot[k]:1; c.role=fallbackRole(c.isBg?"background":(c.edge>=0.42||c.share<0.02)?(c.lab[0]>=72?"highlight":"outline"):"fill"); });
+}
+/* Selbst angetippte Farben: jedes Pixel zur nächsten Tipp-Farbe, zu weit weg = nicht gemalt */
+/* Mengen bleiben erhalten, wenn die Farben neu erkannt werden (z. B. anderer Regler-Wert) */
+function carryQty(prev){
+  clusters.forEach(c=>{ let best=null,bd=10; prev.forEach(p=>{ const d=Math.hypot(c.lab[0]-p.lab[0],c.lab[1]-p.lab[1],c.lab[2]-p.lab[2]); if(d<bd){bd=d;best=p;} }); c.qty=best?best.qty:1; });
+}
+function analyzePicks(){
+  const prevQ=clusters.filter(c=>!c.extra).map(c=>({lab:c.lab,qty:c.qty||1}));
+  const n=px.w*px.h, L=px.lab; clusters=[]; assign=new Int16Array(n).fill(-1);
+  if(!picks.length){ matchAll(); return; }
+  const cnt=new Array(picks.length).fill(0); let valid=0;
+  for(let i=0;i<n;i++){
+    if(!px.valid[i]) continue; valid++;
+    let best=-1,bv=26*26;
+    for(let k=0;k<picks.length;k++){ const c=picks[k].lab, a=L[i*3]-c[0], b=L[i*3+1]-c[1], e=L[i*3+2]-c[2], v=a*a+b*b+e*e; if(v<bv){bv=v;best=k;} }
+    if(best>=0){ assign[i]=best; cnt[best]++; }
+  }
+  clusters=picks.map((p,k)=>({rgb:p.rgb,hex:p.hex,lab:p.lab,share:valid?cnt[k]/valid:0,include:true,isBg:false,tap:k+1}));
+  carryQty(prevQ); estimateRoles(); clusters.forEach((c,k)=>{ if(picks[k].role) c.role=picks[k].role; });
+  matchAll();
+}
+function analyze(){
+  if(mode==="combo") return buildCombo();
+  if(!px) return;
+  if(mode==="photo" && how==="pick") return analyzePicks();
+  const res=autoK?autoKmeans(px):kmeans(px,+$("k").value), n=px.w*px.h, C=res.centers, as=res.assign;
+  const count=new Array(C.length).fill(0); let valid=0;
+  for(let i=0;i<n;i++) if(as[i]>=0){count[as[i]]++;valid++;}
+  const tiny=new Set(); count.forEach((c,i)=>{ if(c<valid*0.004) tiny.add(i); });
+  if(tiny.size && tiny.size<C.length){
+    const l=px.lab;
+    for(let i=0;i<n;i++){
+      if(as[i]<0||!tiny.has(as[i])) continue;
+      let best=-1,bv=Infinity;
+      C.forEach((c,ci)=>{ if(tiny.has(ci)) return; const a=l[i*3]-c[0],b=l[i*3+1]-c[1],e=l[i*3+2]-c[2],v=a*a+b*b+e*e; if(v<bv){bv=v;best=ci;} });
+      as[i]=best;
+    }
+  }
+  const st=C.map(()=>({n:0,r:0,g:0,b:0,l:0,a:0,bb:0,border:0})); let bt=0;
+  for(let i=0;i<n;i++){
+    const c=as[i]; if(c<0) continue; const s=st[c];
+    s.n++; s.r+=px.rgb[i*3]; s.g+=px.rgb[i*3+1]; s.b+=px.rgb[i*3+2]; s.l+=px.lab[i*3]; s.a+=px.lab[i*3+1]; s.bb+=px.lab[i*3+2];
+    if(px.border[i]){s.border++;bt++;}
+  }
+  const prevQ=clusters.filter(c=>!c.extra).map(c=>({lab:c.lab,qty:c.qty||1}));
+  const map=new Map(); clusters=[];
+  st.forEach((s,ci)=>{
+    if(!s.n) return; map.set(ci,clusters.length);
+    const rgb=[s.r/s.n,s.g/s.n,s.b/s.n];
+    clusters.push({rgb,hex:rgbToHex(...rgb),lab:[s.l/s.n,s.a/s.n,s.bb/s.n],share:s.n/valid,borderShare:bt?s.border/bt:0,include:true,isBg:false});
+  });
+  assign=new Int16Array(n).fill(-1);
+  for(let i=0;i<n;i++) if(as[i]>=0) assign[i]=map.get(as[i]);
+  let bg=-1,bs=0; clusters.forEach((c,i)=>{ if(c.borderShare>bs){bs=c.borderShare;bg=i;} });
+  if(bg>=0 && bs>0.5 && clusters[bg].share>0.12){ clusters[bg].isBg=true; clusters[bg].include=false; }
+  const order=clusters.map((c,i)=>i).sort((a,b)=>clusters[b].share-clusters[a].share);
+  const remap=new Int16Array(order.length); order.forEach((o,ni)=>remap[o]=ni);
+  clusters=order.map(o=>clusters[o]);
+  for(let i=0;i<n;i++) if(assign[i]>=0) assign[i]=remap[assign[i]];
+  if(autoK){ $("k").value=String(clusters.length); $("kOut").textContent=clusters.length; }
+  carryQty(prevQ); estimateRoles();
+  matchAll();
+}
+function poolFilter(role){
+  if(matchMode==="one"){ const b=splitRoles?(roleOne[role]||matchBrand):matchBrand; return p=>p.brand===b; }
+  if(splitRoles&&roleMix[role]){ const b=roleMix[role]; return p=>p.brand===b; }
+  const cands=[p=>baseAllowed(p.brand)&&mixAllowed(p.brand)&&(!splitRoles||pressureOk(p.brand,role)), p=>baseAllowed(p.brand)&&mixAllowed(p.brand), p=>baseAllowed(p.brand)];
+  return cands.find(f=>brands.some(b=>f({brand:b})))||cands[2];
+}
+function matchCluster(c){
+  c.alts=nearest(c.lab,poolFilter(c.role),6); c.pick=c.alts.length?c.alts[0].p.i:-1; c.best=c.pick; c.manual=false;
+  if(c.pinKey){ const p=palette.find(q=>q.brand+"|"+q.code===c.pinKey); if(p){ c.pick=p.i; c.manual=true; if(!c.alts.some(a=>a.p.i===p.i)) c.alts=[{p,de:deLab(c.lab,p.lab)},...c.alts]; } }
+}
+/* Zusätzliche Dosen, die nicht aus dem Bild kommen. Sie bleiben, auch wenn das Bild neu ausgewertet wird. */
+let extras=[];
+function matchAll(){
+  clusters=clusters.filter(c=>!c.extra).concat(extras);
+  clusters.forEach(matchCluster);
+  optimizePrice();
+  render();
+}
+
+/* ---------- Staffelpreise ---------- */
+const DEFAULT_TIERS={};
+let tiers=new Map(Object.entries(DEFAULT_TIERS).map(([b,t])=>[b,t.map(([min,price])=>({min,price}))]));
+function onTiers(res){
+  let p=res&&res.payload; if(typeof p==="string"){ try{p=JSON.parse(p);}catch(e){} }
+  if(p&&!Array.isArray(p.values)&&p.content) p=p.content;
+  const rows=p&&Array.isArray(p.values)?p.values:[];
+  const m=new Map();
+  rows.forEach(r=>{ const b=String(r[0]||"").trim(), min=parseInt(String(r[1]||"").replace(/\D/g,""),10), price=parsePrice(r[2]); if(!b||!min||price==null) return; if(!m.has(b)) m.set(b,[]); m.get(b).push({min,price}); });
+  if(!m.size) return;
+  m.forEach(t=>t.sort((a,b)=>a.min-b.min)); tiers=m;
+  optimizePrice(); render(); renderBasket();
+}
+/* Rabatt pro Dose bei n Dosen: Abstand zum Einzelpreis der Staffel. Wird vom Preis der einzelnen Dose abgezogen. */
+function tierDisc(brand,n){
+  const t=tiers.get(brand); if(!t||!t.length) return 0;
+  let cur=t[0]; for(const x of t) if(n>=x.min) cur=x;
+  return Math.max(0,t[0].price-cur.price);
+}
+function nextTier(brand,n){ const t=tiers.get(brand); if(!t) return null; const x=t.find(x=>x.min>n); return x?{need:x.min-n,price:x.price,min:x.min}:null; }
+/* Kosten einer Menge: Map key -> {brand,price,qty} */
+function costOf(items){
+  const byBrand=new Map(); let total=0, full=0;
+  items.forEach(it=>{ if(it.price==null||!it.qty) return; full+=it.price*it.qty; byBrand.set(it.brand,(byBrand.get(it.brand)||0)+it.qty); });
+  items.forEach(it=>{ if(it.price==null||!it.qty) return; const n=byBrand.get(it.brand); total+=(it.price-tierDisc(it.brand,n))*it.qty; });
+  return {total,full};
+}
+
+/* ---------- Möglichst günstig: Dosen so wählen, dass Preis inkl. Staffel und Sammelkorb minimal wird ---------- */
+const PRICE_CFG={bal:{tol:2.5,lam:0.15},cheap:{tol:6,lam:0.02}};
+function optimizePrice(){
+  clusters.forEach(c=>{ c.priceSwap=false; });
+  if(priceMode==="color"||!clusters.length) return;
+  const cfg=PRICE_CFG[priceMode], act=clusters.filter(c=>c.include&&c.pick>=0);
+  const free=act.filter(c=>!c.manual);
+  if(!free.length) return;
+  const vis=new Set(brands.filter(baseAllowed));
+  free.forEach(c=>{
+    const f=poolFilter(c.role), best=deLab(c.lab,palette[c.best].lab), cand=[];
+    vis.forEach(b=>{ const n=nearest(c.lab,q=>q.brand===b&&f(q),1)[0]; if(n&&n.de<=best+cfg.tol&&n.p.price!=null) cand.push(n); });
+    if(!cand.some(x=>x.p.i===c.best)) cand.push({p:palette[c.best],de:best});
+    c.cand=cand;
+  });
+  const base=basketItemsForCost();
+  const score=()=>{
+    const items=new Map(base.map(x=>[x.key,{...x}]));
+    const seen=new Set(); let de=0;
+    act.forEach(c=>{ const p=palette[c.pick], q=c.qty||1; de+=deLab(c.lab,p.lab)*q; const k=p.brand+"|"+p.code, it=items.get(k); if(it) it.qty+=q; else items.set(k,{key:k,brand:p.brand,price:p.price,qty:q}); });
+    return costOf([...items.values()]).total+cfg.lam*de;
+  };
+  let cur=score();
+  for(let pass=0;pass<12;pass++){
+    let improved=false;
+    for(const c of free){
+      const keep=c.pick; let bestPick=keep, bestS=cur;
+      for(const x of c.cand){ if(x.p.i===keep) continue; c.pick=x.p.i; const sc=score(); if(sc<bestS-1e-9){bestS=sc;bestPick=x.p.i;} }
+      c.pick=bestPick; if(bestPick!==keep){ cur=bestS; improved=true; }
+    }
+    /* ganze Marke umziehen, damit die Staffel greift */
+    const used=[...new Set(free.map(c=>palette[c.pick].brand))];
+    for(const a of used) for(const b of vis){
+      if(a===b) continue;
+      const mv=free.filter(c=>palette[c.pick].brand===a&&c.cand.some(x=>x.p.brand===b)); if(!mv.length) continue;
+      const old=mv.map(c=>c.pick); mv.forEach(c=>{ c.pick=c.cand.find(x=>x.p.brand===b).p.i; });
+      const sc=score(); if(sc<cur-1e-9){ cur=sc; improved=true; } else mv.forEach((c,k)=>{ c.pick=old[k]; });
+    }
+    if(!improved) break;
+  }
+  free.forEach(c=>{ c.priceSwap=c.pick!==c.best; });
+}
+
+/* ---------- Farbkombi ohne Bild ---------- */
+const STORE_COMBO="dosenrechner.combo.v1";
+const ROLE_WEIGHT={background:7,fill:6,outline:2,backline:1.6,inline:1,highlight:.5};
+let comboView="cans", slotSeq=1;
+/* Farben, wie sie auf dem Beispiel-Piece gedacht sind (das Foto selbst ist verblasst) */
+const PHOTO_SLOTS=[{role:"background",hex:"#3f8a63"},{role:"fill",hex:"#e4ece2"},{role:"fill",hex:"#5d9ccc"},{role:"fill",hex:"#f2a48f"},
+  {role:"outline",hex:"#262247"},{role:"backline",hex:"#262247"},{role:"inline",hex:"#ffffff"},{role:"highlight",hex:"#ffffff"}];
+const OLD_DEFAULT="#26324a,#e8452c,#f2a03d,#141414,#f3efe6,#ffd84a,#ffffff";
+let combo={slots:PHOTO_SLOTS.map(x=>({...x})),saved:[]};
+try{ const c=JSON.parse(localStorage.getItem(STORE_COMBO)||"null");
+  if(c&&Array.isArray(c.slots)) combo={slots:c.slots.map(x=>x.hex).join(",")===OLD_DEFAULT?PHOTO_SLOTS.map(x=>({...x})):c.slots,saved:Array.isArray(c.saved)?c.saved:[]}; }catch(e){}
+combo.slots.forEach(sl=>{ sl.id=slotSeq++; if(!ROLES.includes(sl.role)) sl.role="fill"; });
+function saveCombo(){ try{ localStorage.setItem(STORE_COMBO,JSON.stringify({slots:combo.slots.map(({role,hex,can,qty})=>({role,hex,can,qty})),saved:combo.saved})); }catch(e){} }
+const canLabel=p=>p.brand+" "+p.code+" "+p.name;
+function renderCanList(){ $("canList").innerHTML=palette.filter(p=>baseAllowed(p.brand)).map(p=>'<option value="'+esc(canLabel(p))+'"></option>').join(""); }
+function renderSlots(){
+  $("slots").innerHTML=combo.slots.map((sl,k)=>{
+    const p=sl.can?palette.find(q=>q.brand+"|"+q.code===sl.can):null;
+    return '<div class="slot" data-slot="'+sl.id+'">'+
+      '<select data-f="role" aria-label="Rolle von Farbe '+(k+1)+'">'+activeRoles().map(r=>'<option value="'+r+'"'+(r===fallbackRole(sl.role)?" selected":"")+'>'+ROLE_LABEL[r]+'</option>').join("")+'</select>'+
+      '<input type="color" data-f="hex" value="'+sl.hex+'" aria-label="Farbe '+(k+1)+' frei wählen">'+
+      '<input type="text" data-f="can" list="canList" value="'+(p?esc(canLabel(p)):"")+'" placeholder="Dose: Code oder Name" aria-label="Dose für Farbe '+(k+1)+'">'+
+      '<button type="button" class="x" data-f="rm" aria-label="Farbe '+(k+1)+' entfernen">×</button></div>';
+  }).join("");
+  $("comboSaved").innerHTML=combo.saved.map((c,i)=>'<span class="pc"><button type="button" data-load="'+i+'" style="all:unset;cursor:pointer">'+esc(c.name)+'</button> <small>'+c.slots.length+' Farben</small><button type="button" data-del="'+i+'" aria-label="Kombi '+esc(c.name)+' löschen">×</button></span>').join("");
+  $("cvMine").setAttribute("aria-pressed",comboView==="mine"); $("cvCans").setAttribute("aria-pressed",comboView==="cans");
+}
+function buildCombo(){
+  const prev=new Map(clusters.filter(c=>c.slotId!=null).map(c=>[c.slotId,c]));
+  const tot=combo.slots.reduce((a,sl)=>a+(ROLE_WEIGHT[sl.role]||1),0)||1;
+  clusters=combo.slots.map(sl=>{ const rgb=hexToRgb(sl.hex), o=prev.get(sl.id);
+    return {rgb,hex:sl.hex,lab:srgbToLab(...rgb),share:(ROLE_WEIGHT[sl.role]||1)/tot,include:o?o.include:true,isBg:false,role:fallbackRole(sl.role),qty:sl.qty??1,slotId:sl.id,pinKey:sl.can||null}; });
+  clusters.sort((a,b)=>b.share-a.share);
+  saveCombo(); matchAll();
+}
+/* Beispiel-Piece: Foto plus Karte, welcher Bildpunkt zu welcher Rolle gehört. Umgefärbt wird mit der Helligkeit des Fotos, damit Spraynebel und Struktur bleiben. */
+let PIECE={img:"",reg:"",w:900,h:376};
+/* Bereich -> Rolle und welche Farbe dieser Rolle, mit Ersatz falls es sie nicht gibt */
+const REGION_SLOTS={1:[["background",0]],2:[["backline",0],["outline",0]],3:[["outline",0]],4:[["fill",0]],5:[["fill",1],["fill",0]],6:[["fill",2],["fill",1],["fill",0]],7:[["inline",0],["highlight",0]],8:[["highlight",0],["inline",0]]};
+let pieceBase=null;
+function loadPiece(){
+  if(!PIECE.img||!PIECE.reg) return;
+  const a=new Image(), b=new Image(); let n=0;
+  const done=()=>{ if(++n<2) return;
+    const W=PIECE.w,H=PIECE.h, c=document.createElement("canvas"); c.width=W; c.height=H; const x=c.getContext("2d",{willReadFrequently:true});
+    x.drawImage(a,0,0,W,H); const rgb=x.getImageData(0,0,W,H).data.slice(); x.clearRect(0,0,W,H); x.drawImage(b,0,0,W,H); const rd=x.getImageData(0,0,W,H).data;
+    const reg=new Uint8Array(W*H), lum=new Float32Array(W*H), sum=new Float64Array(9), cnt=new Float64Array(9);
+    for(let i=0;i<W*H;i++){ reg[i]=rd[i*4]; lum[i]=0.2126*rgb[i*4]+0.7152*rgb[i*4+1]+0.0722*rgb[i*4+2]; sum[reg[i]]+=lum[i]; cnt[reg[i]]++; }
+    const shade=new Float32Array(W*H); for(let i=0;i<W*H;i++){ const m=cnt[reg[i]]?sum[reg[i]]/cnt[reg[i]]:1; shade[i]=Math.max(.45,Math.min(1.6,lum[i]/Math.max(1,m))); }
+    pieceBase={W,H,rgb,reg,shade}; if(mode==="combo") drawCombo();
+  };
+  a.onload=done; b.onload=done; a.src=PIECE.img; b.src=PIECE.reg;
+}
+loadPiece();
+function drawCombo(){
+  const cv=$("comboCv"), ctx=cv.getContext("2d");
+  if(!pieceBase){ ctx.fillStyle="#e9e6df"; ctx.fillRect(0,0,cv.width,cv.height); return; }
+  const {W,H,rgb,reg,shade}=pieceBase;
+  const cols=role=>clusters.filter(c=>c.role===role&&c.include&&!c.extra).map(c=>comboView==="cans"&&c.pick>=0&&palette[c.pick]?palette[c.pick].hex:c.hex);
+  const byRole={}; ROLES.forEach(r=>byRole[r]=cols(r));
+  const target=[null];
+  for(let r=1;r<=8;r++){ let t=null; for(const [role,k] of REGION_SLOTS[r]){ const l=byRole[role]; if(l&&l[k]){ t=hexToRgb(l[k]); break; } } target.push(t); }
+  const id=ctx.createImageData(W,H), d=id.data;
+  for(let i=0;i<W*H;i++){
+    const t=target[reg[i]];
+    if(!t){ d[i*4]=rgb[i*4]; d[i*4+1]=rgb[i*4+1]; d[i*4+2]=rgb[i*4+2]; }
+    else{ const s=shade[i], add=(s-1)*28; d[i*4]=t[0]*s+add; d[i*4+1]=t[1]*s+add; d[i*4+2]=t[2]*s+add; }
+    d[i*4+3]=255;
+  }
+  ctx.putImageData(id,0,0);
+}
+function hsl(h,s,l){ h=((h%360)+360)%360/360; s/=100; l/=100; const q=l<.5?l*(1+s):l+s-l*s, p=2*l-q;
+  const f=t=>{ t=(t+1)%1; return t<1/6?p+(q-p)*6*t:t<1/2?q:t<2/3?p+(q-p)*(2/3-t)*6:p; }; return rgbToHex(f(h+1/3)*255,f(h)*255,f(h-1/3)*255); }
+function randomCombo(){
+  const R=(a,b)=>a+Math.random()*(b-a), h=R(0,360), scheme=Math.floor(R(0,3)), comp=h+[180,150,120][scheme];
+  const nFill=combo.slots.filter(s=>s.role==="fill").length||1; let fi=0;
+  combo.slots.forEach(sl=>{ sl.can=null;
+    switch(sl.role){
+      case "fill": sl.hex=hsl(h+fi*R(18,40),R(70,95),R(48,62)-fi*4); fi++; break;
+      case "background": sl.hex=hsl(comp,R(25,55),R(18,34)); break;
+      case "outline": sl.hex=Math.random()<.6?"#141414":hsl(comp,R(40,70),R(12,22)); break;
+      case "backline": sl.hex=Math.random()<.5?hsl(comp,R(60,90),R(55,70)):hsl(h,R(10,30),R(88,95)); break;
+      case "inline": sl.hex=hsl(h+R(-20,40),R(80,100),R(72,84)); break;
+      case "highlight": sl.hex=Math.random()<.7?"#ffffff":hsl(h,30,95); break;
+    } });
+  renderSlots(); buildCombo();
+}
+$("slots").addEventListener("input",e=>{
+  const row=e.target.closest("[data-slot]"); if(!row) return; const sl=combo.slots.find(x=>x.id===+row.dataset.slot); if(!sl) return;
+  if(e.target.dataset.f==="hex"){ sl.hex=e.target.value; sl.can=null; const t=row.querySelector('[data-f="can"]'); if(t) t.value=""; buildCombo(); }
+});
+$("slots").addEventListener("change",e=>{
+  const row=e.target.closest("[data-slot]"); if(!row) return; const sl=combo.slots.find(x=>x.id===+row.dataset.slot); if(!sl) return;
+  const f=e.target.dataset.f;
+  if(f==="role"){ sl.role=e.target.value; buildCombo(); }
+  if(f==="can"){ const v=e.target.value.trim().toLowerCase(); if(!v){ sl.can=null; buildCombo(); return; }
+    const p=palette.find(q=>baseAllowed(q.brand)&&canLabel(q).toLowerCase()===v)||palette.find(q=>baseAllowed(q.brand)&&(q.code.toLowerCase()===v||canLabel(q).toLowerCase().includes(v)));
+    if(p){ sl.can=p.brand+"|"+p.code; sl.hex=p.hex; setTimeout(()=>{ renderSlots(); buildCombo(); },0); }
+    else $("basketStatus").textContent=""; }
+});
+$("slots").addEventListener("click",e=>{
+  const b=e.target.closest('[data-f="rm"]'); if(!b) return; const row=b.closest("[data-slot]");
+  combo.slots=combo.slots.filter(x=>x.id!==+row.dataset.slot); renderSlots(); buildCombo();
+});
+$("slotAdd").addEventListener("click",()=>{ combo.slots.push({id:slotSeq++,role:"fill",hex:hsl(Math.random()*360,80,55)}); renderSlots(); buildCombo(); const r=$("slots").lastElementChild; if(r) r.querySelector("select").focus(); });
+$("comboPhoto").addEventListener("click",()=>{ combo.slots=PHOTO_SLOTS.map(x=>({...x,id:slotSeq++})); renderSlots(); buildCombo(); });
+$("comboRandom").addEventListener("click",randomCombo);
+$("cvMine").addEventListener("click",()=>{ comboView="mine"; renderSlots(); drawCombo(); });
+$("cvCans").addEventListener("click",()=>{ comboView="cans"; renderSlots(); drawCombo(); });
+$("comboSave").addEventListener("click",()=>{
+  const name=$("comboName").value.trim()||("Kombi "+(combo.saved.length+1));
+  combo.saved.push({name,slots:combo.slots.map(({role,hex,can})=>({role,hex,can}))}); $("comboName").value=""; saveCombo(); renderSlots();
+});
+$("comboSaved").addEventListener("click",e=>{
+  const ld=e.target.closest("[data-load]"), del=e.target.closest("[data-del]");
+  if(ld){ const c=combo.saved[+ld.dataset.load]; if(!c) return; combo.slots=c.slots.map(s=>({...s,id:slotSeq++})); renderSlots(); buildCombo(); }
+  if(del){ combo.saved.splice(+del.dataset.del,1); saveCombo(); renderSlots(); }
+});
+
+/* Feedback: Adresse eintragen, dann erscheint der Button */
+const FEEDBACK_MAIL="";
+if(FEEDBACK_MAIL){ const b=$("feedbackBtn"); b.href="mailto:"+FEEDBACK_MAIL+"?subject="+encodeURIComponent("Dosenzettel Feedback"); b.hidden=false; }
+
+/* Hell / Dunkel, Standard hell */
+function applyTheme(t){
+  t=t==="dark"?"dark":"light";
+  document.documentElement.setAttribute("data-theme",t);
+  document.querySelectorAll("[data-theme-set]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.themeSet===t));
+  try{ localStorage.setItem("dosenzettel.theme",t); }catch(e){}
+  if(mode==="combo") drawCombo();
+}
+document.querySelectorAll("[data-theme-set]").forEach(b=>b.addEventListener("click",()=>applyTheme(b.dataset.themeSet)));
+try{ applyTheme(localStorage.getItem("dosenzettel.theme")); }catch(e){ applyTheme("light"); }
+
+/* ---------- Sammelkorb ---------- */
+const STORE_BASKET="dosenrechner.basket.v1";
+let basket={pieces:[],items:{}};
+try{ const b=JSON.parse(localStorage.getItem(STORE_BASKET)||"null"); if(b&&b.items&&Array.isArray(b.pieces)) basket={pieces:b.pieces,items:b.items}; }catch(e){}
+function saveBasket(){ try{ localStorage.setItem(STORE_BASKET,JSON.stringify(basket)); }catch(e){} }
+function palFor(it){ return palette.find(p=>p.brand===it.brand&&p.code===it.code)||null; }
+function basketItemsForCost(){
+  return Object.entries(basket.items).map(([key,it])=>{ const p=palFor(it); return {key,brand:it.brand,price:p&&p.price!=null?p.price:it.price,qty:it.qty}; });
+}
+
+/* ---------- Rechnen & Darstellen ---------- */
+function compute(){
+  const cans=new Map();
+  clusters.forEach(c=>{
+    if(!c.include||c.pick<0) return;
+    const e=cans.get(c.pick)||{pi:c.pick,share:0,lab:c.lab,top:0,roles:new Set(),count:0,cl:[]}; e.share+=c.share; e.count+=(c.qty||1); e.cl.push(c); e.roles.add(c.role); if(c.share>e.top){e.top=c.share;e.lab=c.lab;e.role=c.role;} cans.set(c.pick,e);
+  });
+  const list=[...cans.values()].sort((a,b)=>b.share-a.share);
+  return {list,total:list.reduce((a,e)=>a+e.count,0)};
+}
+/* Echte Dosenfotos pro Marke: Foto + Maske für Deckel und Sprühkopf. Der Deckel wird in der Dosenfarbe eingefärbt. */
+let CAN_IMAGES={};
+const canBase={}, canImgCache=new Map();
+function loadCanImages(){
+  Object.entries(CAN_IMAGES).forEach(([brand,a])=>{
+    const i1=new Image(), i2=new Image(); let n=0;
+    const done=()=>{ if(++n<2) return;
+      const c=document.createElement("canvas"); c.width=i1.naturalWidth; c.height=i1.naturalHeight;
+      const x=c.getContext("2d"); x.drawImage(i1,0,0); const base=x.getImageData(0,0,c.width,c.height);
+      x.clearRect(0,0,c.width,c.height); x.drawImage(i2,0,0); const md=x.getImageData(0,0,c.width,c.height).data;
+      canBase[brand]={base,md,w:c.width,h:c.height};
+      try{ render(); }catch(e){}
+    };
+    i1.onload=done; i2.onload=done; i1.src=a.img; i2.src=a.mask;
+  });
+}
+function canImgUrl(brand,hex){
+  const B=canBase[brand]; if(!B) return null;
+  const key=brand+hex; if(canImgCache.has(key)) return canImgCache.get(key);
+  const [tr,tg,tb]=hexToRgb(hex), d=new Uint8ClampedArray(B.base.data);
+  const md=B.md;
+  for(let i=0;i<B.w*B.h;i++){
+    const m=md[i*4]/255; if(!m) continue;
+    const sh=md[i*4+1]/128, hi=md[i*4+2];
+    d[i*4]+=(Math.min(255,tr*sh+hi)-d[i*4])*m; d[i*4+1]+=(Math.min(255,tg*sh+hi)-d[i*4+1])*m; d[i*4+2]+=(Math.min(255,tb*sh+hi)-d[i*4+2])*m;
+  }
+  const c=document.createElement("canvas"); c.width=B.w; c.height=B.h; c.getContext("2d").putImageData(new ImageData(d,B.w,B.h),0,0);
+  const url=c.toDataURL("image/png"); canImgCache.set(key,url); return url;
+}
+function canSvg(hex){
+  return '<svg viewBox="0 0 42 84" aria-hidden="true">'+
+    '<rect x="15" y="1" width="12" height="9" rx="2.5" fill="'+hex+'" stroke="var(--ink)" stroke-width="1.5"/>'+
+    '<path d="M7 20 Q7 11 21 11 Q35 11 35 20 Z" fill="var(--line)" stroke="var(--ink)" stroke-width="1.5"/>'+
+    '<rect x="7" y="19" width="28" height="63" rx="4" fill="'+hex+'" stroke="var(--ink)" stroke-width="1.5"/>'+
+    '<rect x="7.75" y="44" width="26.5" height="14" fill="rgba(0,0,0,.2)"/>'+
+    '<rect x="11" y="23" width="3" height="54" rx="1.5" fill="rgba(255,255,255,.35)"/></svg>';
+}
+let lastText="", finderSet=false, lastGroups=[];
+function cartScript(brand,items,want){
+  if(!want){ want={}; items.forEach(e=>{ if(e.count>0) want[palette[e.pi].order]=e.count; }); }
+  return `// Dosenzettel: ${brand} in den Warenkorb (betterrun.shop)
+// Auf der Produktseite von ${brand}: F12, Tab "Konsole", einfügen, Enter.
+// Das Skript trägt die Mengen ein. Prüfen und "In den Warenkorb" klickst du selbst.
+(async () => {
+  const want = ${JSON.stringify(want)};
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const rowOf = c => document.querySelector('.maxia-variants-table--variant[data-orderNumber="' + c + '"], .maxia-variants-table--variant[data-ordernumber="' + c + '"]');
+  for (let i = 0; i < 40 && Object.keys(want).some(c => !rowOf(c)); i++) {
+    const btn = [...document.querySelectorAll(".maxia-variants-table--footer .more-button")].find(b => b.offsetParent !== null);
+    if (!btn) break;
+    const n = document.querySelectorAll(".maxia-variants-table--variant").length;
+    btn.click();
+    for (let t = 0; t < 40 && document.querySelectorAll(".maxia-variants-table--variant").length === n; t++) await sleep(250);
+    if (document.querySelectorAll(".maxia-variants-table--variant").length === n) break;
+  }
+  const done = [], missing = [];
+  let total = 0, price = 0;
+  for (const [code, qty] of Object.entries(want)) {
+    const row = rowOf(code);
+    const field = row && row.querySelector(".maxia-number-input--field");
+    if (!field) { missing.push(code); continue; }
+    const plus = row.querySelector(".plus-button");
+    for (let k = 0; plus && k < qty && (+field.value || 0) < qty; k++) { plus.click(); await sleep(60); }
+    if ((+field.value || 0) !== qty) {
+      field.value = qty;
+      ["input", "keyup", "change", "blur"].forEach(t => field.dispatchEvent(new Event(t, { bubbles: true })));
+    }
+    total += qty; done.push(code + " x" + qty);
+    try {
+      const tiers = JSON.parse(row.dataset.prices || "[]");
+      const tier = tiers.find(p => qty >= p.from && (p.to == null || qty <= p.to)) || tiers[0];
+      if (tier) price += tier.price * qty;
+    } catch (e) {}
+  }
+  console.log("Eingetragen: " + done.join(", "));
+  if (missing.length) console.warn("Nicht gefunden: " + missing.join(", ") + ". Bist du auf der richtigen Produktseite? Falls ja: einmal selbst auf 'weitere anzeigen' klicken und das Skript nochmal starten.");
+  console.log(total + " Dosen" + (price ? ", ca. " + price.toFixed(2).replace(".", ",") + " EUR laut Staffelpreisen" : "") + ". Prüf unten 'Deine Auswahl' und klick auf 'In den Warenkorb'.");
+  document.querySelector(".maxia-variants-table--sticky-footer")?.scrollIntoView({ block: "end" });
+})();`;
+}
+function render(){
+  const r=compute();
+  $("rows").innerHTML=!clusters.length?'<tr><td colspan="'+(splitRoles?7:6)+'" class="hint">'+(mode==="photo"&&how==="pick"?"Tipp im Bild auf die Farben, die du brauchst.":"Keine Farben gefunden.")+'</td></tr>':clusters.map((c,i)=>{
+    const pal=palette[c.pick]; if(!pal) return "";
+    const d=deLab(c.lab,pal.lab);
+    const optsList=c.alts.some(a=>a.p.i===c.pick)?c.alts:[...c.alts,{p:pal,de:d}].sort((a,b)=>a.de-b.de);
+    const opts=optsList.map(a=>'<option value="'+a.p.i+'"'+(a.p.i===c.pick?" selected":"")+'>'+(matchMode==="mix"?esc(a.p.brand)+" · ":"")+esc(a.p.code)+' '+esc(a.p.name)+' – '+simPct(a.de)+' %'+(a.p.price!=null?' · '+eur(a.p.price):'')+'</option>').join("");
+    const subs=imageSubs(c.lab,pal.brand,c.role).slice(0,3).map(q=>'<button type="button" class="it" data-i="'+i+'" data-pi="'+q.p.i+'" title="'+esc(q.p.brand+' '+q.p.code+' '+q.p.name)+' übernehmen"><span class="sw sm" style="background:'+q.p.hex+'"></span><b>'+esc(q.p.brand)+'</b> <span class="mono">'+esc(q.p.code)+'</span> '+deChip(q.de)+'</button>').join("");
+    return '<tr class="'+(c.include?"":"off")+'">'+
+      '<td class="mid"><input type="checkbox" id="inc'+i+'" data-i="'+i+'"'+(c.include?" checked":"")+' aria-label="Farbe '+(i+1)+' malen">'+(c.isBg?'<span class="bgtag">Hintergrund</span>':'')+(c.extra?'<span class="xtag">Zusatz</span><button type="button" class="rmx" data-rmx="'+i+'">Entfernen</button>':'')+'</td>'+
+      (splitRoles?'<td class="mid"><select class="rolesel'+(HIGH_ROLES.has(c.role)?'':' low')+'" data-role="'+i+'" aria-label="Rolle für Farbe '+(i+1)+'">'+activeRoles().map(r=>'<option value="'+r+'"'+(r===c.role?' selected':'')+'>'+ROLE_LABEL[r]+'</option>').join("")+'</select></td>':'')+
+      '<td><div class="pair">'+(c.tap?'<span class="tapno">'+c.tap+'</span>':'')+'<span class="sw" style="background:'+c.hex+'" title="Bild '+c.hex+'"></span><span class="arrow">→</span><span class="sw" style="background:'+pal.hex+'" title="'+esc(pal.code)+' '+pal.hex+'"></span></div></td>'+
+      '<td><select id="sel'+i+'" data-i="'+i+'" aria-label="Dose für Farbe '+(i+1)+'">'+opts+'</select>'+(subs?'<div class="subs">Andere Marken: '+subs+'</div>':'')+'</td>'+
+      '<td class="mid">'+deChip(d)+(c.priceSwap?'<span class="pricechip" title="Wegen des Preises statt '+esc(palette[c.best].brand+' '+palette[c.best].code)+' gewählt">günstiger</span>':'')+'</td>'+
+      '<td class="num">'+(c.extra?'–':nf1.format(c.share*100)+' %')+'</td>'+
+      '<td><span class="qty sm"><button type="button" data-ci="'+i+'" data-d="-1" aria-label="Eine Dose weniger für Farbe '+(i+1)+'">−</button><input type="number" min="0" step="1" value="'+(c.qty??1)+'" data-cqi="'+i+'" aria-label="Dosen für Farbe '+(i+1)+'"><button type="button" data-ci="'+i+'" data-d="1" aria-label="Eine Dose mehr für Farbe '+(i+1)+'">+</button></span></td></tr>';
+  }).join("");
+  const groups=[]; r.list.forEach(e=>{const q=palette[e.pi], b=q.brand; let g=groups.find(x=>x.brand===b); if(!g){g={brand:b,items:[],total:0,cost:0,missing:0};groups.push(g);} g.items.push(e); g.total+=e.count; if(q.price!=null) g.cost+=q.price*e.count; else g.missing+=e.count;});
+  const costAll=groups.reduce((a,g)=>a+g.cost,0), missAll=groups.reduce((a,g)=>a+g.missing,0);
+  const costTxt=g=>g.cost?' · ca. '+eur(g.cost)+(g.missing?', '+g.missing+' ohne Preis':''):'';
+  groups.sort((a,b)=>b.total-a.total);
+  const roleTag=e=>splitRoles?ROLES.filter(r=>e.roles.has(r)).map(r=>ROLE_LABEL[r]).join(" + "):"";
+  const canBtn=e=>{const q=palette[e.pi];return '<div class="canwrap"><button class="can" type="button" data-pi="'+e.pi+'" aria-label="'+esc(q.brand+' '+q.code+' '+q.name)+(splitRoles?" für "+roleTag(e):"")+', Ersatz anzeigen">'+'<span class="canpic">'+(canImgUrl(q.brand,q.hex)?'<img class="canimg" src="'+canImgUrl(q.brand,q.hex)+'" alt="">':canSvg(q.hex))+'</span><span class="stripe" style="background:'+q.hex+'" title="'+q.hex+'"></span><span class="code">'+esc(q.code)+'</span><span class="name" title="'+esc(q.name)+'">'+esc(q.name)+'</span>'+(q.price!=null?'<span class="price">'+eur(q.price)+'</span>':'')+(splitRoles?'<span class="role">'+roleTag(e)+'</span>':'')+'</button><span class="qty sm"><button type="button" data-pq="'+e.pi+'" data-d="-1" aria-label="Eine Dose weniger '+esc(q.code)+'">−</button><input type="number" min="0" step="1" value="'+e.count+'" data-pqi="'+e.pi+'" aria-label="Anzahl '+esc(q.code)+'"><button type="button" data-pq="'+e.pi+'" data-d="1" aria-label="Eine Dose mehr '+esc(q.code)+'">+</button></span></div>'};
+  $("cans").innerHTML=!r.list.length ? '<p class="hint">Keine Farbe ausgewählt. Hak in der Tabelle mindestens eine Farbe an.</p>'
+    : groups.map((g,gi)=>'<div class="cangroup"><div class="grouphead"><h3>'+esc(g.brand)+(pressureOf(g.brand)?' <em class="prtag">'+PR_LABEL[pressureOf(g.brand)]+'</em>':'')+' <span>'+g.items.length+' Farbe'+(g.items.length>1?"n":"")+', '+g.total+' Dose'+(g.total!==1?"n":"")+costTxt(g)+'</span></h3><button class="btn small" type="button" data-cart="'+gi+'">Warenkorb-Skript kopieren</button></div><div class="cans">'+g.items.map(canBtn).join("")+'</div></div>').join("");
+  lastGroups=groups;
+  $("tColors").textContent=nf0.format(r.list.length);
+  $("tCans").textContent=nf0.format(r.total);
+  $("tCost").textContent=costAll?eur(costAll):"–";
+  $("tCostLbl").textContent=costAll?(missAll?"Kosten ca., "+missAll+" Dose"+(missAll>1?"n":"")+" ohne Preis":"Kosten ca., Einzelpreise"):"Kosten: noch keine Preise";
+  lastText="Dosenliste\n"+
+    groups.map(g=>"\n"+g.brand+(pressureOf(g.brand)?" · "+PR_LABEL[pressureOf(g.brand)]+" Pressure":"")+" ("+g.total+costTxt(g).replace(" · ",", ")+")\n"+g.items.map(e=>{const q=palette[e.pi]; const s=imageSubs(e.lab,q.brand,e.role)[0];
+      return e.count+"× "+q.code+" "+q.name+" ("+q.hex+", "+(e.cl.every(c=>c.extra)?"zusätzlich":nf1.format(e.share*100)+" % vom Bild")+")"+(splitRoles?" ["+roleTag(e)+"]":"")+(q.price!=null?" · "+eur(q.price):"")+(s?"  | Ersatz: "+s.p.brand+" "+s.p.code+" "+s.p.name:"");}).join("\n")).join("\n")+"\n"+
+    "\nGesamt: "+r.total+" Dosen in "+r.list.length+" Farben"+(costAll?", ca. "+eur(costAll)+(missAll?" (ohne "+missAll+" ohne Preis)":""):"")+(paletteIsDemo?"\n(Demo-Farbkarten, keine echten Herstellerfarben)":"");
+  if(!finderSet && r.list.length){ finderSet=true; setFinder(r.list[0].pi,false); }
+  else if(syncFinderBrands() || (finderCtx!=null && !inList(finderCtx))) renderFinder();
+  if(mode==="combo") drawCombo(); else drawPreview();
+}
+function drawPreview(sel){
+  const cv=$("preview"), ctx=cv.getContext("2d");
+  const showBase = cropping;
+  const src = showBase ? base : img;
+  if(!src) return;
+  cv.width=src.width; cv.height=src.height;
+  const mk=(!showBase && masks.length)?masks[masks.length-1]:null;
+  if(showBase || view==="orig" || !px || !assign){
+    ctx.drawImage(src,0,0);
+    if(mk && px && mk.length===px.w*px.h){
+      const off=document.createElement("canvas"); off.width=px.w; off.height=px.h;
+      const octx=off.getContext("2d"), id=octx.createImageData(px.w,px.h), d=id.data;
+      for(let i=0;i<mk.length;i++) if(mk[i]){ d[i*4]=18;d[i*4+1]=18;d[i*4+2]=16;d[i*4+3]=200; }
+      octx.putImageData(id,0,0); ctx.imageSmoothingEnabled=false; ctx.drawImage(off,0,0,cv.width,cv.height);
+    }
+  }
+  else{
+    const off=document.createElement("canvas"); off.width=px.w; off.height=px.h;
+    const octx=off.getContext("2d"), id=octx.createImageData(px.w,px.h), d=id.data;
+    const cols=clusters.map(c=>c.include&&c.pick>=0?hexToRgb(palette[c.pick].hex):null);
+    for(let i=0;i<px.w*px.h;i++){
+      const a=assign[i]; let rgb=(a>=0&&cols[a])?cols[a]:[px.rgb[i*3],px.rgb[i*3+1],px.rgb[i*3+2]];
+      if(a<0 && px.valid0[i]) rgb=rgb.map(v=>v*0.22+14);
+      d[i*4]=rgb[0];d[i*4+1]=rgb[1];d[i*4+2]=rgb[2];d[i*4+3]=(a>=0||px.valid0[i])?255:0;
+    }
+    octx.putImageData(id,0,0);
+    ctx.clearRect(0,0,cv.width,cv.height); ctx.imageSmoothingEnabled=false; ctx.drawImage(off,0,0,cv.width,cv.height);
+  }
+  if(!showBase && mode==="photo" && how==="pick"){
+    const rr=Math.max(9,cv.width/70);
+    picks.forEach((p,k)=>{ if(!p.pos) return;
+      ctx.beginPath(); ctx.arc(p.pos.x,p.pos.y,rr,0,Math.PI*2); ctx.fillStyle=p.hex; ctx.fill();
+      ctx.lineWidth=Math.max(2,rr/4); ctx.strokeStyle="#ffffff"; ctx.stroke(); ctx.lineWidth=1; ctx.strokeStyle="#111"; ctx.stroke();
+      ctx.font="700 "+Math.round(rr*1.1)+"px Archivo, Arial, sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillStyle=(p.lab[0]>60)?"#111":"#fff"; ctx.fillText(String(k+1),p.pos.x,p.pos.y+1);
+    });
+  }
+  if(showBase){
+    const r=sel||crop;
+    if(r){
+      ctx.fillStyle="rgba(0,0,0,.45)";
+      ctx.fillRect(0,0,cv.width,r.y); ctx.fillRect(0,r.y+r.h,cv.width,cv.height-r.y-r.h);
+      ctx.fillRect(0,r.y,r.x,r.h); ctx.fillRect(r.x+r.w,r.y,cv.width-r.x-r.w,r.h);
+      ctx.strokeStyle="#ffffff"; ctx.lineWidth=Math.max(2,cv.width/300); ctx.setLineDash([10,6]); ctx.strokeRect(r.x,r.y,r.w,r.h); ctx.setLineDash([]);
+    }
+  }
+}
+
+/* ---------- Ersatzsuche ---------- */
+function fillFinderCans(brand,selectPi){
+  const list=palette.filter(p=>p.brand===brand);
+  $("fCan").innerHTML=list.map(p=>'<option value="'+p.i+'">'+esc(p.code)+' '+esc(p.name)+'</option>').join("");
+  if(selectPi!=null) $("fCan").value=String(selectPi);
+}
+let finderCtx=null; /* Dose aus der Einkaufsliste, die getauscht werden soll */
+function setFinder(pi,scroll,fromList){
+  const p=palette[pi]; if(!p) return;
+  if(fromList) finderCtx=pi; $("finderStatus").textContent="";
+  if(![...$("fBrand").options].some(o=>o.value===p.brand)) $("fBrand").insertAdjacentHTML("beforeend",'<option value="'+esc(p.brand)+'">'+esc(p.brand)+'</option>');
+  $("fBrand").value=p.brand; fillFinderCans(p.brand,pi); renderFinder();
+  if(scroll) $("finder").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+}
+const inList=pi=>clusters.some(c=>c.include&&c.pick===pi);
+function renderFinder(){
+  if(finderCtx!=null&&!inList(finderCtx)) finderCtx=null;
+  const cp=finderCtx!=null?palette[finderCtx]:null;
+  $("finderCtx").innerHTML=cp?'<div class="ctxbox"><span class="sw" style="background:'+cp.hex+'"></span><span>In der Einkaufsliste: <b>'+esc(cp.brand)+' <span class="mono">'+esc(cp.code)+'</span></b> '+esc(cp.name)+'. Mit „Tauschen“ ersetzt du sie, die Menge bleibt.</span><button class="btn small" type="button" data-ctxoff>Nicht tauschen</button></div>':'';
+  const p=palette[+$("fCan").value];
+  if(!p){ $("finderOut").innerHTML='<p class="empty">Keine Dose gewählt.</p>'; return; }
+  const acts=q=>'<span class="acts">'+(cp&&q.i!==cp.i?'<button class="btn small" type="button" data-swap="'+q.i+'">Tauschen</button>':'')+
+    (inList(q.i)?'<span class="hint">Schon in der Liste</span>':'<button class="btn small" type="button" data-addx="'+q.i+'">Hinzufügen</button>')+'</span>';
+  const subs=substitutes(p,3);
+  $("finderOut").innerHTML='<div class="finder-src"><span class="sw" style="background:'+p.hex+'"></span><div><div class="t">'+esc(p.brand)+' <span class="mono">'+esc(p.code)+'</span></div><div class="hint">'+esc(p.name)+' · <span class="mono">'+p.hex+'</span>'+(p.price!=null?' · '+eur(p.price):'')+'</div>'+acts(p)+'</div></div>'+
+    (subs.length?'<div class="finder-grid">'+subs.map(s=>'<div class="brandcard"><h3>'+esc(s.brand)+'</h3><ol>'+s.list.map(x=>'<li><span class="sw" style="background:'+x.p.hex+'"></span><span><span class="mono">'+esc(x.p.code)+'</span> '+esc(x.p.name)+(x.p.price!=null?'<span class="pr">'+eur(x.p.price)+'</span>':'')+'</span>'+deChip(x.de)+acts(x.p)+'</li>').join("")+'</ol></div>').join("")+'</div>'
+      :'<p class="empty">Nur eine Marke geladen. Für Ersatz braucht es mindestens zwei Marken.</p>');
+}
+function swapCan(from,to){
+  const q=palette[to]; if(!q) return;
+  const key=q.brand+"|"+q.code; let n=0;
+  clusters.forEach(c=>{ if(!c.include||c.pick!==from) return; n++;
+    c.pick=to; c.manual=true; if(!c.alts.some(a=>a.p.i===to)) c.alts=[...c.alts,{p:q,de:deLab(c.lab,q.lab)}];
+    if(c.extra) c.pinKey=key;
+    if(c.slotId!=null){ const sl=combo.slots.find(x=>x.id===c.slotId); if(sl){ sl.can=key; saveCombo(); } } });
+  if(!n) return;
+  const f=palette[from]; finderCtx=to; optimizePrice(); render(); if(mode==="combo") renderSlots();
+  setFinder(to,false); $("finderStatus").textContent=f.brand+" "+f.code+" durch "+q.brand+" "+q.code+" "+q.name+" ersetzt.";
+}
+function addExtraCan(pi){
+  const q=palette[pi]; if(!q||inList(pi)) return;
+  const c={rgb:hexToRgb(q.hex),hex:q.hex,lab:q.lab,share:0,include:true,isBg:false,role:"fill",qty:1,extra:true,pinKey:q.brand+"|"+q.code};
+  extras.push(c); clusters.push(c); matchCluster(c); optimizePrice(); render(); renderFinder();
+  $("finderStatus").textContent=q.brand+" "+q.code+" "+q.name+" zur Einkaufsliste hinzugefügt.";
+}
+
+/* ---------- Beispielskizze ---------- */
+function drawDemo(){
+  const c=document.createElement("canvas"); c.width=640; c.height=320;
+  const x=c.getContext("2d");
+  x.fillStyle="#f3f1ea"; x.fillRect(0,0,640,320);
+  x.fillStyle="#9fd3e6";
+  [[150,170,130,95],[330,150,170,120],[500,175,125,95],[320,240,240,60]].forEach(([cx,cy,rx,ry])=>{x.beginPath();x.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);x.fill();});
+  x.font="900 168px Impact, 'Arial Black', 'Helvetica Neue', sans-serif";
+  x.textAlign="center"; x.textBaseline="middle"; x.lineJoin="round";
+  const word="DOSE", X=320, Y=172;
+  for(let s=14;s>0;s-=2){ x.fillStyle="#5b2a86"; x.fillText(word,X+s,Y+s); }
+  x.strokeStyle="#111111"; x.lineWidth=10; x.strokeText(word,X+14,Y+14); x.lineWidth=14; x.strokeText(word,X,Y);
+  const g=x.createLinearGradient(0,Y-70,0,Y+70);
+  g.addColorStop(0,"#ffd400");g.addColorStop(.38,"#ffd400");g.addColorStop(.38,"#ff7a00");g.addColorStop(.68,"#ff7a00");g.addColorStop(.68,"#e0262b");g.addColorStop(1,"#e0262b");
+  x.fillStyle=g; x.fillText(word,X,Y);
+  x.strokeStyle="#ffffff"; x.lineWidth=6; x.lineCap="round";
+  [[150,112,170,112],[262,112,278,112],[372,112,388,112],[470,112,490,112]].forEach(([a,b,cc,d])=>{x.beginPath();x.moveTo(a,b);x.lineTo(cc,d);x.stroke();});
+  return c;
+}
+
+/* ---------- Laden ---------- */
+function useSource(source,demo){
+  const max=900, s=Math.min(1,max/Math.max(source.width,source.height));
+  const c=document.createElement("canvas"); c.width=Math.round(source.width*s); c.height=Math.round(source.height*s);
+  c.getContext("2d").drawImage(source,0,0,c.width,c.height);
+  if(mode==="combo"){ mode="sketch"; updateModeUi(); }
+  base=c; crop=null; masks=[]; picks=[]; clusters=[]; renderPicks(); isDemo=demo; setCropping(false); setWanding(false); setPicking(mode==="photo"&&how==="pick");
+  $("demoChip").style.display=demo?"":"none";
+  buildImage();
+}
+function loadFile(file){
+  if(!file||!file.type.startsWith("image/")){ $("copyStatus").textContent="Das ist kein Bild. Nimm ein JPG oder PNG."; return; }
+  const url=URL.createObjectURL(file), im=new Image();
+  im.onload=()=>{ useSource(im,false); URL.revokeObjectURL(url); };
+  im.onerror=()=>{ URL.revokeObjectURL(url); $("copyStatus").textContent="Das Bild konnte nicht gelesen werden. Versuch es mit JPG oder PNG."; };
+  im.src=url;
+}
+
+/* ---------- Ausschnitt ---------- */
+let cropping=false, dragStart=null, dragRect=null;
+function setCropping(on){
+  if(on){ setWanding(false); setPicking(false); }
+  cropping=on; $("cropBtn").setAttribute("aria-pressed",on); $("cropBtn").textContent=on?"Rahmen ziehen …":"Ausschnitt wählen";
+  $("drop").classList.toggle("cropping",on); drawPreview();
+}
+function toImg(e){
+  const cv=$("preview"), r=cv.getBoundingClientRect(), s=cv.width/r.width;
+  return {x:Math.max(0,Math.min(cv.width,(e.clientX-r.left)*s)), y:Math.max(0,Math.min(cv.height,(e.clientY-r.top)*s))};
+}
+const cv=$("preview");
+cv.addEventListener("pointerdown",e=>{ if(!cropping) return; e.preventDefault(); cv.setPointerCapture(e.pointerId); dragStart=toImg(e); dragRect=null; });
+cv.addEventListener("pointermove",e=>{ if(!cropping||!dragStart) return; const p=toImg(e);
+  dragRect={x:Math.min(dragStart.x,p.x),y:Math.min(dragStart.y,p.y),w:Math.abs(p.x-dragStart.x),h:Math.abs(p.y-dragStart.y)}; drawPreview(dragRect); });
+cv.addEventListener("pointerup",()=>{ if(!cropping||!dragStart) return; dragStart=null;
+  if(dragRect && dragRect.w>12 && dragRect.h>12){ crop={x:Math.round(dragRect.x),y:Math.round(dragRect.y),w:Math.round(dragRect.w),h:Math.round(dragRect.h)}; masks=[]; picks.forEach(p=>p.pos=null); setCropping(false); buildImage(); if(mode==="photo"&&how==="pick") setPicking(true); }
+  else drawPreview(); });
+
+/* ---------- Untergrund antippen (Zauberstab) ---------- */
+let masks=[], wanding=false;
+function applyMask(){
+  const m=masks.length?masks[masks.length-1]:null;
+  for(let i=0;i<px.valid.length;i++) px.valid[i]=px.valid0[i]&&!(m&&m[i])?1:0;
+}
+function updateWandUi(){
+  $("wandBtn").setAttribute("aria-pressed",wanding);
+  $("wandBtn").textContent=wanding?"Fertig mit Antippen":"Untergrund antippen";
+  $("drop").classList.toggle("wanding",wanding);
+  $("tolWrap").hidden=!wanding;
+  $("wandUndo").hidden=!masks.length; $("wandReset").hidden=!masks.length;
+}
+function setWanding(on){ if(on && cropping) setCropping(false); if(on) setPicking(false); wanding=on; updateWandUi(); }
+function wandAt(p){
+  if(!px) return;
+  const cvs=$("preview"), W=px.w, H=px.h;
+  const gx=Math.min(W-1,Math.floor(p.x*W/cvs.width)), gy=Math.min(H-1,Math.floor(p.y*H/cvs.height));
+  const L=px.lab, prev=masks.length?masks[masks.length-1]:null;
+  // Farbe am Tippunkt: Mittel über 3x3, damit Rauschen nicht stört
+  let sl=0,sa=0,sb=0,n=0;
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const x=gx+dx,y=gy+dy; if(x<0||y<0||x>=W||y>=H)continue; const i=y*W+x; if(!px.valid0[i])continue; sl+=L[i*3];sa+=L[i*3+1];sb+=L[i*3+2];n++;}
+  if(!n) return;
+  sl/=n;sa/=n;sb/=n;
+  const tol=+$("tol").value, t2=tol*tol;
+  const m=prev?prev.slice():new Uint8Array(W*H), seen=new Uint8Array(W*H), stack=[gy*W+gx];
+  let added=0;
+  while(stack.length){
+    const i=stack.pop(); if(seen[i]) continue; seen[i]=1;
+    if(!px.valid0[i]) continue;
+    const a=L[i*3]-sl,b=L[i*3+1]-sa,c=L[i*3+2]-sb; if(a*a+b*b+c*c>t2) continue;
+    if(!m[i]){m[i]=1;added++;}
+    const x=i%W, y=(i/W)|0;
+    if(x>0)stack.push(i-1); if(x<W-1)stack.push(i+1); if(y>0)stack.push(i-W); if(y<H-1)stack.push(i+W);
+  }
+  if(!added) return;
+  masks.push(m); applyMask(); updateWandUi(); analyze();
+}
+
+/* ---------- Farben selbst antippen (mit Lupe) ---------- */
+let picking=false;
+function setPicking(on){
+  if(on && typeof cropping!=="undefined" && cropping) setCropping(false);
+  if(on && wanding){ wanding=false; updateWandUi(); }
+  picking=!!on; $("drop").classList.toggle("picking",picking); $("loupe").hidden=true;
+  const b=$("pickBtn"); b.setAttribute("aria-pressed",picking); b.textContent=picking?"Fertig":"Weitere Farben antippen"; b.classList.toggle("primary",picking);
+}
+function sampleAt(p){
+  if(!imgData) return null;
+  const W=imgData.width,H=imgData.height,d=imgData.data, r=Math.max(1,Math.round(W/300));
+  let R=0,G=0,B=0,n=0;
+  for(let dy=-r;dy<=r;dy++) for(let dx=-r;dx<=r;dx++){ const x=Math.round(p.x)+dx,y=Math.round(p.y)+dy; if(x<0||y<0||x>=W||y>=H) continue; const i=(y*W+x)*4; if(d[i+3]<128) continue; R+=d[i];G+=d[i+1];B+=d[i+2];n++; }
+  if(!n) return null;
+  const rgb=[R/n,G/n,B/n]; return {rgb,hex:rgbToHex(...rgb),lab:srgbToLab(...rgb)};
+}
+function drawLoupe(e,p){
+  const lp=$("loupe"), drop=$("drop"), cvs=$("preview"); if(!img) return;
+  const S=lp.width, cssS=lp.getBoundingClientRect().width||176, lc=lp.getContext("2d");
+  const shown=cvs.getBoundingClientRect().width/cvs.width||1, zoom=+$("zoom").value;
+  const span=cssS/(zoom*shown), sx=p.x-span/2, sy=p.y-span/2, k=S/span;
+  lc.imageSmoothingEnabled=zoom*shown<4; lc.fillStyle="#808080"; lc.fillRect(0,0,S,S);
+  lc.drawImage(img,sx,sy,span,span,0,0,S,S);
+  const r=Math.max(1,Math.round(img.width/300)), m=Math.max(5,(r+0.5)*k), c=S/2;
+  lc.lineWidth=4; lc.strokeStyle="#000"; lc.strokeRect(c-m,c-m,2*m,2*m);
+  lc.lineWidth=2; lc.strokeStyle="#fff"; lc.strokeRect(c-m,c-m,2*m,2*m);
+  lc.beginPath(); [[c,c-m-18,c,c-m-4],[c,c+m+4,c,c+m+18],[c-m-18,c,c-m-4,c],[c+m+4,c,c+m+18,c]].forEach(([a,b,d,f])=>{lc.moveTo(a,b);lc.lineTo(d,f);});
+  lc.lineWidth=4; lc.strokeStyle="#000"; lc.stroke(); lc.lineWidth=2; lc.strokeStyle="#fff"; lc.stroke();
+  const smp=sampleAt(p); lp.style.borderColor=smp?smp.hex:"var(--ink)";
+  const x=e.clientX, y=e.clientY, h=cssS/2, vw=innerWidth, vh=innerHeight, gap=e.pointerType==="mouse"?28:80;
+  let left=x-h, top=y-gap-cssS;
+  if(top<4){ top=Math.max(4,Math.min(vh-cssS-4,y-h)); left=(x+gap+cssS<vw-4)?x+gap:x-gap-cssS; }
+  lp.style.left=Math.max(4,Math.min(vw-cssS-4,left))+"px";
+  lp.style.top=top+"px";
+  lp.hidden=false;
+}
+function addPick(p){
+  const smp=sampleAt(p); if(!smp) return;
+  picks.push({...smp,pos:{x:p.x,y:p.y}}); renderPicks(); analyze();
+}
+function renderPicks(){
+  const el=$("pickList"); if(!el) return;
+  el.innerHTML=picks.length?picks.map((p,k)=>'<span class="pk"><span class="sw" style="background:'+p.hex+'"></span>'+(k+1)+'<button type="button" data-k="'+k+'" aria-label="Farbe '+(k+1)+' entfernen">×</button></span>').join("")
+    :'<span class="hint">Noch keine Farbe angetippt.</span>';
+  $("pickUndo").disabled=!picks.length; $("pickClear").disabled=!picks.length;
+}
+cv.addEventListener("pointermove",e=>{ if(!picking||!img) return; drawLoupe(e,toImg(e)); });
+cv.addEventListener("pointerdown",e=>{ if(!picking||!img) return; e.preventDefault(); try{cv.setPointerCapture(e.pointerId);}catch(_){}; drawLoupe(e,toImg(e)); });
+cv.addEventListener("pointerup",e=>{ if(!picking||!img) return; addPick(toImg(e)); if(e.pointerType!=="mouse") $("loupe").hidden=true; });
+cv.addEventListener("pointerleave",()=>{ $("loupe").hidden=true; });
+$("pickBtn").addEventListener("click",()=>setPicking(!picking));
+$("zoom").addEventListener("input",e=>{ $("zoomOut").textContent=String(e.target.value).replace(".",","); try{ localStorage.setItem("dosenrechner.zoom",e.target.value); }catch(_){} });
+try{ const z=localStorage.getItem("dosenrechner.zoom"); if(z){ $("zoom").value=z; $("zoomOut").textContent=z.replace(".",","); } }catch(_){}
+$("pickUndo").addEventListener("click",()=>{ picks.pop(); renderPicks(); analyze(); });
+$("pickClear").addEventListener("click",()=>{ picks=[]; renderPicks(); analyze(); });
+$("pickList").addEventListener("click",e=>{ const b=e.target.closest("button[data-k]"); if(!b) return; picks.splice(+b.dataset.k,1); renderPicks(); analyze(); });
+
+/* ---------- Events ---------- */
+$("wandBtn").addEventListener("click",()=>setWanding(!wanding));
+$("wandUndo").addEventListener("click",()=>{ masks.pop(); if(px) applyMask(); updateWandUi(); analyze(); });
+$("wandReset").addEventListener("click",()=>{ masks=[]; if(px) applyMask(); updateWandUi(); analyze(); });
+$("tol").addEventListener("input",e=>{ $("tolOut").textContent=e.target.value; });
+cv.addEventListener("click",e=>{ if(wanding) wandAt(toImg(e)); });
+function updateModeUi(){
+  const photo=mode==="photo", pick=photo&&how==="pick", cmb=mode==="combo";
+  $("modeSketch").setAttribute("aria-pressed",mode==="sketch"); $("modePhoto").setAttribute("aria-pressed",photo); $("modeCombo").setAttribute("aria-pressed",cmb);
+  $("photoOpts").hidden=!photo;
+  $("comboOpts").hidden=!cmb; $("drop").hidden=cmb; $("viewRow").hidden=cmb; $("uploadRow").hidden=cmb; $("uploadLocal").hidden=cmb;
+  $("h-colors").textContent=cmb?"Farben der Kombi":"Farben aus dem Bild";
+  $("howAuto").setAttribute("aria-pressed",!pick); $("howPick").setAttribute("aria-pressed",pick);
+  $("autoTools").hidden=pick; $("pickTools").hidden=!pick; $("kWrap").hidden=pick||cmb;
+  $("modeHint").textContent = cmb
+    ? "Ohne Bild: Stell Farben für Fill, Background, Outline und Co. zusammen und schau sie dir am Beispiel-Piece an. Die passenden Dosen stehen unten wie gewohnt."
+    : photo
+    ? "Foto von einem Piece: Zieh einen Ausschnitt um das Piece. Dann entweder automatisch erkennen lassen oder deine Farben selbst antippen."
+    : "Skizze aus dem Blackbook: Das Papier wird automatisch erkannt und nicht mitgerechnet, die Farben findet der Rechner selbst.";
+  $("howHint").textContent = pick
+    ? "Tipp im Bild nacheinander auf jede Farbe, die du brauchst. Die Lupe zeigt dir, wo du landest. Jeder Tipp ist eine Farbe, die Anzahl ergibt sich daraus. Mit „Fertig“ bestätigst du."
+    : "Der Rechner sucht die Farben selbst. Bleiben Zug, Wand oder Himmel drin, tipp sie mit „Untergrund antippen“ weg.";
+  $("kMode").textContent=autoK?"automatisch":"manuell"; $("kAuto").hidden=autoK;
+}
+function setMode(m){
+  mode=m;
+  if(m==="combo"){ setPicking(false); setWanding(false); setCropping(false); updateModeUi(); renderSlots(); buildCombo(); return; }
+  if(m==="sketch"){ setPicking(false); setWanding(false); setCropping(false); if(crop||masks.length){ crop=null; masks=[]; } }
+  $("expo").checked = m==="photo";
+  if(m==="photo" && how==="pick" && base) setPicking(true);
+  updateModeUi(); if(base) buildImage(); else render();
+}
+function setHow(h){
+  how=h;
+  if(h==="pick"){ setWanding(false); setPicking(true); } else setPicking(false);
+  updateModeUi(); analyze();
+}
+$("modeSketch").addEventListener("click",()=>setMode("sketch"));
+$("modePhoto").addEventListener("click",()=>setMode("photo"));
+$("modeCombo").addEventListener("click",()=>setMode("combo"));
+$("howAuto").addEventListener("click",()=>setHow("auto"));
+$("howPick").addEventListener("click",()=>setHow("pick"));
+$("kAuto").addEventListener("click",()=>{ autoK=true; updateModeUi(); analyze(); });
+$("expo").addEventListener("change",()=>{ if(base) buildImage(); });
+$("file").addEventListener("change",e=>{ loadFile(e.target.files[0]); e.target.value=""; });
+const drop=$("drop");
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer&&e.dataTransfer.files[0]; if(f) loadFile(f);});
+/* Beispiel: Foto vom Piece, Ausschnitt um die Wolke, Zug drumherum ausgeblendet (wie mit „Untergrund antippen“) */
+const DEMO_CROP={x:45,y:8,w:825,h:312};
+function loadDemo(){
+  if(!PIECE.img){ autoK=true; how="auto"; setPicking(false); setWanding(false); mode="sketch"; updateModeUi(); useSource(drawDemo(),true); return; }
+  if(!pieceBase){ setTimeout(loadDemo,80); return; }
+  const im=new Image();
+  im.onload=()=>{ autoK=true; how="auto"; setPicking(false); setWanding(false); mode="photo"; $("expo").checked=true; updateModeUi();
+    useSource(im,true); crop={...DEMO_CROP}; masks=[]; buildImage();
+    if(!px) return;
+    const m=new Uint8Array(px.w*px.h), B=pieceBase;
+    for(let y=0;y<px.h;y++) for(let x=0;x<px.w;x++){
+      const bx=Math.min(B.W-1,Math.floor(crop.x+(x+.5)*crop.w/px.w)), by=Math.min(B.H-1,Math.floor(crop.y+(y+.5)*crop.h/px.h));
+      if(B.reg[by*B.W+bx]===0) m[y*px.w+x]=1; }
+    masks=[m]; applyMask(); updateWandUi(); analyze(); };
+  im.src=PIECE.img;
+}
+$("demoBtn").addEventListener("click",loadDemo);
+$("cropBtn").addEventListener("click",()=>setCropping(!cropping));
+$("uncropBtn").addEventListener("click",()=>{ crop=null; masks=[]; picks.forEach(p=>p.pos=null); setCropping(false); buildImage(); });
+let kT=null;
+$("k").addEventListener("input",e=>{ autoK=false; updateModeUi(); $("kOut").textContent=e.target.value; clearTimeout(kT); kT=setTimeout(analyze,120); });
+$("rows").addEventListener("click",e=>{
+  const b=e.target.closest("button.it"); if(!b) return;
+  const c=clusters[+b.dataset.i]; if(!c) return;
+  c.pick=+b.dataset.pi; c.manual=true; optimizePrice(); render();
+  const sel=$("sel"+b.dataset.i); if(sel) sel.focus();
+});
+$("rows").addEventListener("change",e=>{
+  const rb=e.target.closest("select[data-role]"); if(!rb) return;
+  e.stopImmediatePropagation();
+  const i=+rb.dataset.role, c=clusters[i], v=rb.value; if(!c||!ROLES.includes(v)) return;
+  setTimeout(()=>{
+    c.role=v; if(c.tap&&picks[c.tap-1]) picks[c.tap-1].role=c.role; syncSlot(c); if(c.slotId!=null) renderSlots();
+    matchCluster(c); optimizePrice(); render();
+    const nb=document.querySelector('select[data-role="'+i+'"]'); if(nb) nb.focus();
+  },0);
+});
+function setClusterQty(i,v){ const c=clusters[i]; if(!c) return; c.qty=Math.max(0,Math.min(999,v|0)); syncSlot(c); optimizePrice(); render(); }
+function syncSlot(c){ if(c.slotId==null) return; const sl=combo.slots.find(x=>x.id===c.slotId); if(!sl) return; sl.qty=c.qty??1; sl.role=c.role; saveCombo(); }
+/* Menge pro Dose in der Einkaufsliste: verteilt auf die Bildfarben, die auf diese Dose fallen */
+function setCanQty(pi,v){
+  const cl=clusters.filter(c=>c.include&&c.pick===pi); if(!cl.length) return;
+  v=Math.max(0,Math.min(999,v|0)); const others=cl.slice(1).reduce((a,c)=>a+(c.qty??1),0);
+  if(v>=others) cl[0].qty=v-others; else { cl.forEach(c=>c.qty=0); cl[0].qty=v; }
+  cl.forEach(syncSlot);
+  optimizePrice(); render();
+}
+$("rows").addEventListener("click",e=>{
+  const b=e.target.closest("[data-ci]"); if(!b) return;
+  const i=+b.dataset.ci, c=clusters[i]; if(!c) return;
+  setClusterQty(i,(c.qty??1)+ +b.dataset.d);
+  const nb=document.querySelector('[data-ci="'+i+'"][data-d="'+b.dataset.d+'"]'); if(nb) nb.focus();
+});
+$("cans").addEventListener("change",e=>{ const pi=e.target.dataset.pqi; if(pi==null) return; const v=parseInt(e.target.value,10)||0; setTimeout(()=>setCanQty(+pi,v),0); });
+$("rows").addEventListener("change",e=>{
+  if(e.target.dataset.cqi!=null){ const i=+e.target.dataset.cqi, v=parseInt(e.target.value,10)||0; setTimeout(()=>setClusterQty(i,v),0); return; }
+  const i=+e.target.dataset.i; if(isNaN(i)||!clusters[i]) return;
+  if(e.target.type==="checkbox") clusters[i].include=e.target.checked;
+  else if(e.target.tagName==="SELECT"){ clusters[i].pick=+e.target.value; clusters[i].manual=true; }
+  optimizePrice(); render();
+});
+$("cans").addEventListener("click",e=>{
+  const pq=e.target.closest("[data-pq]");
+  if(pq){ const pi=+pq.dataset.pq, cur=clusters.filter(c=>c.include&&c.pick===pi).reduce((a,c)=>a+(c.qty??1),0); setCanQty(pi,cur+ +pq.dataset.d); const nb=document.querySelector('[data-pq="'+pi+'"][data-d="'+pq.dataset.d+'"]'); if(nb) nb.focus(); return; }
+  const cb=e.target.closest("[data-cart]");
+  if(cb){ const g=lastGroups[+cb.dataset.cart]; if(g) copyText(cartScript(g.brand,g.items),"Warenkorb-Skript für "+g.brand+" kopiert. Jetzt auf der Produktseite in der Konsole einfügen."); return; }
+  const b=e.target.closest(".can"); if(b) setFinder(+b.dataset.pi,true,true);
+});
+function copyText(text,okMsg,where){
+  const fb=$(where==="basket"?"basketFallback":"copyFallback"), st=$(where==="basket"?"basketStatus":"copyStatus");
+  const show=()=>{ fb.value=text; fb.classList.add("show"); fb.focus(); fb.select(); st.textContent="Kopieren wurde blockiert. Markier den Text unten und kopier ihn selbst."; };
+  try{ navigator.clipboard.writeText(text).then(()=>{ fb.classList.remove("show"); st.textContent=okMsg; }, show); }catch(e){ show(); }
+}
+function setView(v){ view=v; $("viewOrig").setAttribute("aria-pressed",v==="orig"); $("viewCans").setAttribute("aria-pressed",v==="cans"); drawPreview(); }
+$("viewOrig").addEventListener("click",()=>setView("orig"));
+$("viewCans").addEventListener("click",()=>setView("cans"));
+$("brandSel").addEventListener("change",e=>{ matchBrand=e.target.value; save(); saveMatch(); matchAll(); });
+function setMatchMode(m){ matchMode=m; renderBrandLists(); renderMatchUi(); saveMatch(); matchAll(); }
+$("mOne").addEventListener("click",()=>setMatchMode("one"));
+function setPriceMode(m){ priceMode=m; renderMatchUi(); saveMatch(); matchAll(); }
+$("pmColor").addEventListener("click",()=>setPriceMode("color"));
+$("pmBal").addEventListener("click",()=>setPriceMode("bal"));
+$("pmCheap").addEventListener("click",()=>setPriceMode("cheap"));
+function setSplit(on){ splitRoles=on; renderMatchUi(); saveMatch(); matchAll(); }
+$("roleSame").addEventListener("click",()=>setSplit(false));
+$("roleSplit").addEventListener("click",()=>setSplit(true));
+$("roleWrap").addEventListener("change",e=>{
+  const ro=e.target.dataset.ro;
+  if(ro&&ro!=="fill"){
+    if(e.target.checked) delete roleOff[ro]; else roleOff[ro]=true;
+    if(e.target.checked&&mode!=="combo"&&px&&assign) estimateRoles();
+    saveMatch(); renderMatchUi();
+    if(mode==="combo"){ renderSlots(); buildCombo(); return; }
+    clusters.forEach(c=>{ const n=fallbackRole(c.role); if(n!==c.role){ c.role=n; if(c.tap&&picks[c.tap-1]) picks[c.tap-1].role=n; } });
+    matchAll(); return;
+  }
+  const r=e.target.dataset.rb; if(!r) return; if(matchMode==="mix") roleMix[r]=e.target.value; else { roleOne[r]=e.target.value; if(r==="fill"){ matchBrand=e.target.value; save(); } } saveMatch(); matchAll(); });
+$("mMix").addEventListener("click",()=>setMatchMode("mix"));
+$("mixList").addEventListener("change",e=>{ const b=e.target.dataset.brand; if(b==null) return; mixPick[b]=e.target.checked; saveMatch(); matchAll(); });
+$("mixDefault").addEventListener("click",()=>{ mixPick={}; saveMatch(); renderBrandLists(); matchAll(); });
+$("mixAll").addEventListener("click",()=>{ visibleBrands().forEach(b=>mixPick[b]=true); saveMatch(); renderBrandLists(); matchAll(); });
+function setBase(m){ baseMode=m; saveMatch(); renderBrandLists(); fillFinderCans($("fBrand").value); matchAll(); }
+$("baseSolvent").addEventListener("click",()=>setBase("solvent"));
+$("baseWater").addEventListener("click",()=>setBase("water"));
+$("fBrand").addEventListener("change",e=>{ fillFinderCans(e.target.value); renderFinder(); });
+$("finderOut").addEventListener("click",e=>{
+  const sw=e.target.closest("[data-swap]"), ad=e.target.closest("[data-addx]");
+  if(sw&&finderCtx!=null) swapCan(finderCtx,+sw.dataset.swap);
+  if(ad) addExtraCan(+ad.dataset.addx);
+});
+$("finderCtx").addEventListener("click",e=>{ if(e.target.closest("[data-ctxoff]")){ finderCtx=null; renderFinder(); } });
+$("addExtra").addEventListener("click",()=>{ finderCtx=null; renderFinder(); $("finder").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"}); $("fBrand").focus(); });
+$("rows").addEventListener("click",e=>{
+  const b=e.target.closest("[data-rmx]"); if(!b) return; const c=clusters[+b.dataset.rmx]; if(!c||!c.extra) return;
+  extras=extras.filter(x=>x!==c); clusters=clusters.filter(x=>x!==c); optimizePrice(); render(); renderFinder();
+});
+$("fCan").addEventListener("change",renderFinder);
+let importConfirm="";
+function palMsg(text,kind){ const st=$("palStatus"); st.style.color=kind==="bad"?"var(--bad)":kind==="warn"?"var(--warn)":"var(--good)"; st.textContent=text; }
+function refreshPalette(){
+  if(paletteIsDemo) return;
+  const keepBrand=matchBrand; setPalette(composePalette(),false); if(brands.includes(keepBrand)) { matchBrand=keepBrand; $("brandSel").value=keepBrand; }
+  fillFinderCans($("fBrand").value); matchAll(); renderFinder(); renderSheetStatus();
+}
+
+/* ---------- Google Sheet als Hauptliste ---------- */
+const SRV="Google Sheets", SHEET_ID="", SHEET_GID=0, TAB="Farben";
+const READ_INPUT={spreadsheetId:SHEET_ID,range:TAB+"!A2:J"};
+const sheet={mcp:null,state:"connecting",text:"",at:0,needsAllow:false};
+function valuesOf(res){
+  let p=res&&res.payload;
+  if(typeof p==="string"){ try{p=JSON.parse(p);}catch(e){} }
+  if(p&&!Array.isArray(p.values)&&p.content) p=p.content;
+  const v=(p&&Array.isArray(p.values))?p.values:null;
+  if(!v) return null;
+  return v.map(r=>{const a=r.map(x=>x==null?"":String(x).trim()); while(a.length<10)a.push(""); return a.slice(0,10);}).filter(r=>r.some(Boolean));
+}
+function errText(e){
+  const c=e&&e.code;
+  switch(c){
+    case "needs_reauth": return ["bad","Die Google-Sheets-Verbindung ist abgelaufen. Verbinde sie in claude.ai unter Einstellungen → Connectors neu. Bis dahin rechnet der Rechner mit den eingebauten Farben."];
+    case "server_not_connected": return ["bad","Google Sheets ist für dich nicht verbunden. Füg es in claude.ai unter Einstellungen → Connectors hinzu. Bis dahin: eingebaute Farben."];
+    case "selection_required": return ["warn","Du hast mehrere Google-Sheets-Verbindungen. Wähl in claude.ai eine aus, dann lädt das Sheet."];
+    case "approval_required": case "not_in_manifest": case "consent_required": return ["warn","Der Rechner darf noch nicht auf dein Sheet zugreifen. Klick auf „Zugriff erlauben“."];
+    case "blocked_by_policy": return ["bad","Deine Organisation erlaubt diesen Zugriff auf Google Sheets nicht. Es sind keine Farbkarten geladen."];
+    case "tool_error": return ["bad","Google Sheets meldet einen Fehler"+(e.message?": "+String(e.message).slice(0,160):"")+". Prüf, ob das Sheet „Dosen-Farbkarten“ und der Tab „Farben“ noch da sind."];
+    case "server_unavailable": case "rate_limited": return ["warn","Google Sheets ist gerade nicht erreichbar. Der Rechner nutzt den letzten Stand."];
+    case "not_granted": case "capability_disabled": case "capability_removed": return ["warn","In dieser Ansicht gibt es keine Verbindung zu Google Sheets. Es sind keine Farbkarten geladen."];
+    default: return ["warn","Das Sheet konnte nicht geladen werden"+(e&&e.message?" ("+String(e.message).slice(0,120)+")":"")+". Der Rechner nutzt den letzten Stand."];
+  }
+}
+const DENIALS=new Set(["needs_reauth","server_not_connected","blocked_by_policy","approval_required","not_in_manifest","consent_required","selection_required"]);
+function renderSheetStatus(){
+  const dot=$("sheetDot"), t=$("sheetText");
+  dot.className="dot"+(sheet.state==="ok"?" ok":sheet.state==="bad"?" bad":sheet.state==="warn"?" warn":"");
+  if(sheet.state==="ok"){
+    const n=sheetPalette().length, when=sheet.at?new Date(sheet.at).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):"";
+    t.textContent="Farbkarten geladen: "+n+" Dosen"+(when?", Stand "+when+" Uhr":"")+".";
+  } else t.textContent=sheet.text||"Lade Farbkarten …";
+  $("sheetAllow").hidden=!sheet.needsAllow;
+  $("sheetReload").hidden=!sheet.mcp;
+}
+function onBrandMeta(res){
+  let p=res&&res.payload; if(typeof p==="string"){ try{p=JSON.parse(p);}catch(e){} }
+  if(p&&!Array.isArray(p.values)&&p.content) p=p.content;
+  const v=p&&Array.isArray(p.values)?p.values:null; if(!v||!v.length) return;
+  const meta=new Map(brandMeta);
+  v.forEach(r=>{ const b=String(r[0]||"").trim(); if(!b) return; const old=brandMeta.get(b); meta.set(b,{water:/wasser|water/i.test(String(r[1]||"")),mix:/^(ja|yes|x|1|true)$/i.test(String(r[2]||"").trim()),pressure:parsePressure(r[3])||(old&&old.pressure)||null}); });
+  brandMeta=meta;
+  renderBrandLists(); renderMatchUi(); matchAll();
+}
+function onSheetData(res){
+  const rows=valuesOf(res);
+  if(!rows){ sheet.state="warn"; sheet.text="Das Sheet hat unerwartete Daten geliefert. Es sind keine Farbkarten geladen."; renderSheetStatus(); return; }
+  sheetRows=rows; sheet.needsAllow=false;
+  sheet.state=sheetPalette().length?"ok":"warn";
+  if(sheet.state==="warn") sheet.text="Das Sheet ist leer oder hat keine gültigen Hex-Werte. Es sind keine Farbkarten geladen.";
+  sheet.at=(res&&res.cache&&res.cache.storedAt)||Date.now();
+  refreshPalette();
+  if(!(res&&res.cache)) syncSwatchesOnce();
+}
+function onSheetError(e){
+  const [kind,text]=errText(e);
+  if(DENIALS.has(e&&e.code)){ sheetRows=null; refreshPalette(); }
+  sheet.needsAllow=["approval_required","not_in_manifest","consent_required"].includes(e&&e.code);
+  if(sheetRows && !DENIALS.has(e&&e.code)){ sheet.state="warn"; sheet.text=text; }
+  else { sheet.state=kind; sheet.text=text; }
+  renderSheetStatus();
+}
+async function readFresh(){
+  const res=await sheet.mcp.callTool(SRV,"get_values",READ_INPUT,{cache:{staleTime:0,gcTime:7*864e5,refresh:true}});
+  const rows=valuesOf(res); if(!rows) throw {code:"tool_error",message:"unerwartete Antwort"};
+  return rows;
+}
+function cellSafe(v){ v=String(v==null?"":v); return (/^[=+\-@]/.test(v)||/^\d+([.,]\d+)?$/.test(v)||/^\d{1,2}[.\/-]\d{1,2}([.\/-]\d{2,4})?$/.test(v))?"'"+v:v; }
+function swatchRequests(rows){
+  const white={red:1,green:1,blue:1};
+  return [
+    {repeatCell:{range:{sheetId:SHEET_GID,startRowIndex:1,startColumnIndex:7,endColumnIndex:8},cell:{userEnteredFormat:{backgroundColorStyle:{rgbColor:white}}},fields:"userEnteredFormat.backgroundColorStyle"}},
+    {updateCells:{start:{sheetId:SHEET_GID,rowIndex:1,columnIndex:7},fields:"userEnteredFormat.backgroundColorStyle",
+      rows:rows.map(r=>{ const h=r[4]||""; let c=white; if(HEXRE.test(h)){ const [R,G,B]=hexToRgb(h.startsWith("#")?h:"#"+h); c={red:+(R/255).toFixed(3),green:+(G/255).toFixed(3),blue:+(B/255).toFixed(3)}; } return {values:[{userEnteredFormat:{backgroundColorStyle:{rgbColor:c}}}]}; })}}
+  ];
+}
+function sig(rows){ let h=0; const s=rows.map(r=>r[4]).join("|"); for(let i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0;} return rows.length+":"+h; }
+const SWATCH_KEY="dosenrechner.swatch.v1";
+async function syncSwatchesOnce(){
+  if(!sheet.mcp||!sheetRows||!sheetRows.length) return;
+  const sg=sig(sheetRows); let last=""; try{ last=localStorage.getItem(SWATCH_KEY)||""; }catch(e){}
+  if(last===sg) return;
+  try{ await sheet.mcp.callTool(SRV,"update_spreadsheet",{spreadsheetId:SHEET_ID,requests:swatchRequests(sheetRows)}); try{ localStorage.setItem(SWATCH_KEY,sg); }catch(e){} }catch(e){ /* Farbfelder sind nur Komfort */ }
+}
+$("sheetReload").addEventListener("click",async()=>{
+  if(!sheet.mcp) return;
+  const b=$("sheetReload"); b.disabled=true;
+  try{ const res=await sheet.mcp.callTool(SRV,"get_values",READ_INPUT,{cache:{staleTime:0,gcTime:7*864e5,refresh:true}}); onSheetData(res); palMsg("Sheet neu geladen."); }
+  catch(e){ onSheetError(e); }
+  finally{ b.disabled=false; }
+});
+$("sheetAllow").addEventListener("click",async()=>{
+  if(!sheet.mcp) return;
+  try{ const res=await sheet.mcp.callTool(SRV,"get_values",READ_INPUT,{cache:{staleTime:0,gcTime:7*864e5}}); onSheetData(res); }
+  catch(e){ onSheetError(e); }
+});
+/* Daten kommen von der eigenen API (z. B. Cloudflare Worker). Adresse im <meta name="dosenzettel-api"> oder zum Testen per ?api=… */
+const API_BASE=(new URLSearchParams(location.search).get("api")||document.querySelector('meta[name="dosenzettel-api"]')?.content||"").replace(/\/$/,"");
+(async()=>{
+  if(!API_BASE){ sheet.state="warn"; sheet.text="Keine Farbkarten-Quelle eingestellt."; renderSheetStatus(); return; }
+  sheet.state="connecting"; sheet.text="Lade Farbkarten …"; renderSheetStatus();
+  try{
+    const r=await fetch(API_BASE+"/data",{headers:{accept:"application/json"}});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const d=await r.json();
+    if(Array.isArray(d.brands)) onBrandMeta({payload:{values:d.brands}});
+    if(Array.isArray(d.tiers)) onTiers({payload:{values:d.tiers}});
+    if(d.canImages&&typeof d.canImages==="object"){ CAN_IMAGES=d.canImages; loadCanImages(); }
+    if(d.piece&&d.piece.img){ PIECE=d.piece; loadPiece(); if(isDemo) loadDemo(); }
+    onSheetData({payload:{values:d.colors||[]}});
+  }catch(e){ sheet.state="bad"; sheet.text="Farbkarten konnten nicht geladen werden ("+String(e&&e.message||e).slice(0,80)+")."; renderSheetStatus(); }
+})();
+$("copyBtn").addEventListener("click",()=>copyText(lastText,"Liste kopiert."));
+$("listHowto").addEventListener("click",()=>{ const d=$("howto"); d.open=true; d.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"}); d.querySelector("summary").focus({preventScroll:true}); });
+
+function basketGroups(){
+  const groups=new Map();
+  Object.entries(basket.items).forEach(([key,it])=>{
+    const p=palFor(it), price=p&&p.price!=null?p.price:it.price;
+    if(!groups.has(it.brand)) groups.set(it.brand,{brand:it.brand,rows:[],qty:0});
+    const g=groups.get(it.brand); g.rows.push({key,it,p,price,order:p?p.order:it.order,hex:p?p.hex:it.hex,name:p?p.name:it.name}); g.qty+=it.qty;
+  });
+  const out=[...groups.values()];
+  out.forEach(g=>{
+    g.rows.sort((a,b)=>String(a.it.code).localeCompare(String(b.it.code),"de",{numeric:true}));
+    g.full=0; g.total=0; g.missing=0;
+    g.rows.forEach(r=>{ if(r.price==null){ g.missing+=r.it.qty; return; } const n=g.qty; r.unit=r.price-tierDisc(g.brand,n); g.full+=r.price*r.it.qty; g.total+=r.unit*r.it.qty; });
+  });
+  return out.sort((a,b)=>b.qty-a.qty);
+}
+let lastBasketGroups=[];
+function renderBasket(){
+  const names=Object.fromEntries(basket.pieces.map(p=>[p.id,p.name]));
+  $("pieces").innerHTML=basket.pieces.length?basket.pieces.map(p=>'<span class="pc">'+esc(p.name)+' <small>'+(p.qty?Object.values(p.qty).reduce((a,b)=>a+b,0)+' Dosen':p.keys.length+' Farben')+'</small><button type="button" data-rm="'+esc(p.id)+'" aria-label="'+esc(p.name)+' aus dem Sammelkorb nehmen">×</button></span>').join("")
+    :'<p class="hint">Noch leer. Stell oben die Dosen für ein Piece zusammen und leg sie mit „In den Sammelkorb“ hier ab. Dann das nächste Piece.</p>';
+  const groups=basketGroups(); lastBasketGroups=groups;
+  if(!groups.length){ $("basketBody").innerHTML=""; $("basketCopy").disabled=true; $("basketClear").disabled=true; return; }
+  $("basketCopy").disabled=false; $("basketClear").disabled=false;
+  let all=0, allFull=0, allQty=0, miss=0;
+  $("basketBody").innerHTML=groups.map((g,gi)=>{
+    all+=g.total; allFull+=g.full; allQty+=g.qty; miss+=g.missing;
+    const nt=nextTier(g.brand,g.qty), disc=tierDisc(g.brand,g.qty);
+    const racks=Math.floor(g.qty/6), rest=g.qty%6;
+    const rackTxt=(racks?"<b>"+racks+" Rack"+(racks>1?"s":"")+"</b>"+(rest?" + "+rest+" Dose"+(rest>1?"n":""):""):rest+" Dose"+(rest>1?"n":""))+(rest?", noch "+(6-rest)+" bis zum "+(racks?"nächsten":"ersten")+" vollen Rack.":", alles volle Racks.");
+    const tierTxt=rackTxt+" "+(!tiers.has(g.brand)?"Keine Staffelpreise hinterlegt."
+      :(disc>0?"Staffel greift: <b>"+eur(disc)+" weniger pro Dose</b>.":"Noch keine Staffel erreicht.")+(nt?" Noch <b>"+nt.need+" Dose"+(nt.need>1?"n":"")+"</b> bis zur Staffel ab "+nt.min+" (dann "+eur(nt.price)+" pro Dose).":" Höchste Staffel erreicht."));
+    return '<div class="cangroup"><div class="grouphead"><h3>'+esc(g.brand)+(pressureOf(g.brand)?' <em class="prtag">'+PR_LABEL[pressureOf(g.brand)]+'</em>':'')+' <span>'+g.qty+' Dose'+(g.qty>1?"n":"")+(g.total?' · '+eur(g.total):'')+(g.full-g.total>0.004?' statt '+eur(g.full):'')+(g.missing?', '+g.missing+' ohne Preis':'')+'</span></h3><button class="btn small" type="button" data-bcart="'+gi+'">Warenkorb-Skript kopieren</button></div>'+
+      '<p class="tierline">'+tierTxt+'</p>'+
+      '<table class="btab"><tbody>'+g.rows.map(r=>'<tr><td class="s"><span class="sw sm" style="background:'+r.hex+'"></span></td><td><span class="mono">'+esc(r.it.code)+'</span> '+esc(r.name)+'<span class="from">'+esc((r.it.pieces||[]).map(id=>names[id]).filter(Boolean).join(", "))+'</span></td>'+
+        '<td class="q"><span class="qty"><button type="button" data-dq="'+esc(r.key)+'" data-d="-1" aria-label="Eine weniger">−</button><input type="number" min="0" step="1" value="'+r.it.qty+'" data-qk="'+esc(r.key)+'" aria-label="Menge '+esc(r.it.code)+'"><button type="button" data-dq="'+esc(r.key)+'" data-d="1" aria-label="Eine mehr">+</button></span></td>'+
+        '<td class="pr">'+(r.unit!=null?eur(r.unit*r.it.qty):"–")+'</td></tr>').join("")+'</tbody></table></div>';
+  }).join("")+'<div class="btotal"><span>'+allQty+' Dosen aus '+basket.pieces.length+' Piece'+(basket.pieces.length>1?"s":"")+(allFull-all>0.004?', gespart durch Staffel: '+eur(allFull-all):'')+(miss?', '+miss+' ohne Preis':'')+'</span><b>'+eur(all)+'</b></div>';
+}
+function addToBasket(){
+  const r=compute(); if(!r.list.length){ $("basketStatus").textContent="Keine Dosen ausgewählt."; return; }
+  const id="p"+Date.now().toString(36), name=($("pieceName").value.trim()||("Piece "+(basket.pieces.length+1)));
+  const keys=[], qty={};
+  r.list.forEach(e=>{ if(!e.count) return; const q=palette[e.pi], k=q.brand+"|"+q.code; keys.push(k); qty[k]=e.count;
+    const it=basket.items[k]||(basket.items[k]={brand:q.brand,code:q.code,name:q.name,hex:q.hex,order:q.order,price:q.price,qty:0,pieces:[]});
+    it.qty+=e.count; it.pieces.push(id); });
+  if(!keys.length){ $("basketStatus").textContent="Alle Mengen stehen auf 0."; return; }
+  basket.pieces.push({id,name,keys,qty}); saveBasket(); $("pieceName").value="";
+  renderBasket();
+  $("addBasket").textContent="Im Sammelkorb ✓"; setTimeout(()=>{ $("addBasket").textContent="In den Sammelkorb"; },1600);
+  $("basketStatus").textContent=name+" mit "+Object.values(qty).reduce((a,b)=>a+b,0)+" Dosen in "+keys.length+" Farben in den Sammelkorb gelegt.";
+}
+function removePiece(id){
+  const p=basket.pieces.find(x=>x.id===id); if(!p) return;
+  p.keys.forEach(k=>{ const it=basket.items[k]; if(!it) return; it.pieces=it.pieces.filter(x=>x!==id); it.qty=Math.max(0,it.qty-((p.qty&&p.qty[k])||1)); if(!it.pieces.length) delete basket.items[k]; });
+  basket.pieces=basket.pieces.filter(x=>x.id!==id); saveBasket(); renderBasket(); optimizePrice(); render();
+  $("basketStatus").textContent=p.name+" entfernt.";
+}
+$("addBasket").addEventListener("click",()=>{ addToBasket(); optimizePrice(); render(); });
+$("pieces").addEventListener("click",e=>{ const b=e.target.closest("[data-rm]"); if(b) removePiece(b.dataset.rm); });
+$("basketBody").addEventListener("click",e=>{
+  const d=e.target.closest("[data-dq]");
+  if(d){ const it=basket.items[d.dataset.dq]; if(!it) return; it.qty=Math.max(0,it.qty+ +d.dataset.d); saveBasket(); renderBasket(); const nb=document.querySelector('[data-dq="'+CSS.escape(d.dataset.dq)+'"][data-d="'+d.dataset.d+'"]'); if(nb) nb.focus(); return; }
+  const cb=e.target.closest("[data-bcart]");
+  if(cb){ const g=lastBasketGroups[+cb.dataset.bcart]; if(!g) return; const want={}; let skip=0; g.rows.forEach(r=>{ if(!r.it.qty) return; if(r.order) want[r.order]=r.it.qty; else skip++; });
+    copyText(cartScript(g.brand,null,want),"Warenkorb-Skript für "+g.brand+" kopiert ("+g.qty+" Dosen). Jetzt auf der Produktseite in der Konsole einfügen."+(skip?" "+skip+" Farben ohne Bestellnummer fehlen.":""),"basket"); }
+});
+$("basketBody").addEventListener("change",e=>{ const k=e.target.dataset.qk; if(!k||!basket.items[k]) return; basket.items[k].qty=Math.max(0,parseInt(e.target.value,10)||0); saveBasket(); setTimeout(renderBasket,0); });
+$("basketClear").addEventListener("click",()=>{
+  const b=$("basketClear");
+  if(b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent="Wirklich leeren?"; setTimeout(()=>{ b.dataset.armed=""; b.textContent="Sammelkorb leeren"; },3500); return; }
+  b.dataset.armed=""; b.textContent="Sammelkorb leeren";
+  basket={pieces:[],items:{}}; saveBasket(); renderBasket(); optimizePrice(); render();
+  $("basketStatus").textContent="Sammelkorb geleert.";
+});
+$("basketCopy").addEventListener("click",()=>{
+  const groups=basketGroups(); let all=0;
+  const txt="Sammelkorb: "+basket.pieces.map(p=>p.name).join(", ")+"\n"+groups.map(g=>{ all+=g.total; return "\n"+g.brand+" ("+g.qty+" Dosen = "+Math.floor(g.qty/6)+" Racks + "+(g.qty%6)+(g.total?", "+eur(g.total):"")+")\n"+g.rows.filter(r=>r.it.qty).map(r=>r.it.qty+"× "+r.it.code+" "+r.name+" ("+r.hex+")"+(r.unit!=null?" · "+eur(r.unit)+"/Dose":"")).join("\n"); }).join("\n")+"\n\nGesamt: "+eur(all);
+  copyText(txt,"Sammelkorb-Liste kopiert.","basket");
+});
+renderBasket();
+
+fillFinderCans($("fBrand").value);
+renderSheetStatus();
+renderPicks(); updateModeUi(); loadCanImages();
+loadDemo();
+})();
+</script>
 </body>
 </html>
