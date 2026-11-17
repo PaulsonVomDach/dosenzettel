@@ -11,7 +11,7 @@
  * Variablen: ALLOWED_ORIGINS (kommagetrennt), CACHE_SECONDS
  */
 
-const RANGES = ["Farben!A2:J", "Marken!A2:D", "Staffelpreise!A2:C"];
+const RANGES = ["Farben!A2:J", "Marken!A2:E", "Staffelpreise!A2:C"];
 
 export default {
   async fetch(request, env, ctx) {
