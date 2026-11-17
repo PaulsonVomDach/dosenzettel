@@ -35,7 +35,7 @@ Alles, was gezählt wird, steht in einer einzigen Datei: [`tracking.js`](trackin
 | `ersatz-angesehen` | Dose in der Einkaufsliste angetippt | – |
 | `ersatz-getauscht` | Dose gegen eine andere Marke getauscht | – |
 | `extra-dose-hinzugefuegt` | zusätzliche Dose in die Liste gelegt | – |
-| `feedback-geklickt` | Feedback-Button | – |
+| `feedback-geklickt` | Feedback-Button | Instagram oder Mail |
 
 **Nie gezählt oder verschickt:** Bilder, Farbwerte aus Bildern, Einkaufslisten, Kombis, Mengen, Inhalte des Sammelkorbs.
 
@@ -157,4 +157,4 @@ AGPL-3.0, siehe `LICENSE`. Wer den Code verändert und online stellt, muss seine
 
 ## Feedback
 
-Ideen, Anregungen, Fehler: gerne als Issue hier im Repo.
+Ideen, Anregungen, Fehler: gerne als Issue hier im Repo oder per Nachricht auf Instagram an [@paulsonson](https://www.instagram.com/paulsonson/).

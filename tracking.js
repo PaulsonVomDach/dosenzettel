@@ -64,7 +64,8 @@
     if (t.closest("#finderOut [data-addx]")) return track("extra-dose-hinzugefuegt");
     if (t.closest("#cans .can")) return track("ersatz-angesehen");
 
-    if (t.closest("#feedbackBtn")) return track("feedback-geklickt");
+    if (t.closest("#instaBtn")) return track("feedback-geklickt", { weg: "instagram" });
+    if (t.closest("#feedbackBtn")) return track("feedback-geklickt", { weg: "mail" });
   });
 
   /* Marke gewählt (nur der Markenname) */
