@@ -6,7 +6,7 @@ compatibility_date = "2026-11-01"
 # Die id bekommst du mit: npx wrangler kv namespace create ASSETS
 [[kv_namespaces]]
 binding = "ASSETS"
-id = "HIER_DIE_KV_ID_EINTRAGEN"
+id = "01028b03a2cf47f8930aa5a202100904"
 
 [vars]
 # Domains, die die Daten abrufen dürfen (kommagetrennt). Deine Pages-Domain eintragen.

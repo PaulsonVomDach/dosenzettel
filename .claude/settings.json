@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(npm run test)",
+      "Bash(npm run dev)",
+      "Bash(npx wrangler dev*)",
+      "Bash(npx wrangler whoami)",
+      "Bash(npx wrangler kv namespace list)",
+      "Bash(npx wrangler kv key list*)",
+      "Bash(npx wrangler tail*)"
+    ],
+    "ask": [
+      "Bash(npm run deploy*)",
+      "Bash(npx wrangler deploy*)",
+      "Bash(npx wrangler secret*)",
+      "Bash(npx wrangler kv key put*)",
+      "Bash(npx wrangler kv key delete*)",
+      "Bash(npx wrangler kv bulk*)",
+      "Bash(npx wrangler kv namespace create*)",
+      "Bash(npx wrangler kv namespace delete*)",
+      "Bash(npx wrangler pages deploy*)"
+    ],
+    "deny": [
+      "Read(kv-daten/google-key.json)",
+      "Read(**/*.json.key)",
+      "Read(**/.dev.vars)",
+      "Read(**/.env)",
+      "Read(**/.env.*)"
+    ]
+  }
+}
