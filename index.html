@@ -320,6 +320,17 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
 .howto kbd{font-family:var(--font-mono);font-size:12px;border:2px solid var(--ink);border-bottom-width:3px;border-radius:5px;padding:0 5px;background:var(--panel)}
 .howto .warn{font-size:13px;margin:0;padding:8px 10px;border-left:3px solid var(--warn);background:var(--panel);border-radius:0 8px 8px 0}
 
+.guide{margin:0 0 22px;background:var(--panel);color:var(--ink);box-shadow:4px 4px 0 var(--card-shadow)}
+.guide>summary{font-size:16px}
+.guide .steps li{background:var(--wall)}
+.guide .steps{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+.guide .gfoot{margin:0;font-size:13px;color:var(--muted)}
+.guide .gfoot b{color:var(--ink)}
+.prefnote{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0;padding:8px 12px;border:2px dashed var(--line);border-radius:12px;font-size:13px;color:var(--muted)}
+.prefnote span{flex:1 1 220px}
+.prefnote b{color:var(--ink)}
+.prefnote .ok{color:var(--good);font-weight:800;opacity:0;transition:opacity .2s}
+.prefnote .ok.on{opacity:1}
 .feedback{margin-top:22px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 28px;align-items:center}
 .feedback p{margin:0;max-width:70ch}
 @media (max-width:600px){.feedback{grid-template-columns:1fr}}
@@ -345,6 +356,21 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
     <p class="local"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="9" width="13" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.5 9V6.5a3.5 3.5 0 0 1 7 0V9" fill="none" stroke="currentColor" stroke-width="2"/></svg><span><b>Läuft nur in deinem Browser.</b> Deine Fotos und Skizzen werden nicht hochgeladen und nirgends gespeichert. <a href="#datenschutz">Wie genau?</a></span></p>
     </div>
   </header>
+
+  <details class="howto guide" id="guide">
+    <summary><span class="q">?</span>So funktioniert der Dosenzettel<svg class="chev" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.5"/></svg></summary>
+    <div class="hbody">
+      <ol class="steps">
+        <li><h4>Bild rein</h4><p>Bei <b>„Bild“</b> wählst du <b>Skizze</b>, <b>Foto vom Piece</b> oder <b>Farbkombi</b> und tippst auf <b>„Bild hochladen“</b>. Zum Ausprobieren gibt es <b>„Beispiel“</b>.</p></li>
+        <li><h4>Farben sauber kriegen</h4><p>Bei Fotos nimmt <b>„Untergrund antippen“</b> Wand, Zug oder Himmel raus, <b>„Ausschnitt wählen“</b> schneidet zu. Fehlen Farben, schieb <b>„Anzahl Farben“</b> hoch. Oder tipp sie mit <b>„Selbst antippen“</b> einzeln an.</p></li>
+        <li><h4>Marken einstellen</h4><p>Bei <b>„Farbkarten“</b>: <b>„Eine Marke“</b> oder <b>„Markenmix“</b>. Mit <b>„Nach Rolle trennen“</b> bekommt Fill z.&nbsp;B. High Pressure und Outline Low Pressure. Rollen, die im Piece nicht vorkommen, hakst du ab.</p></li>
+        <li><h4>Liste prüfen</h4><p>Die <b>„Einkaufsliste“</b> zeigt pro Farbe die passende Dose. Wie viele Dosen du brauchst, stellst du mit <b>−</b> und <b>+</b> ein. Passt eine Dose nicht, tauschst du sie bei <b>„Ersatz finden“</b>.</p></li>
+        <li><h4>Sammeln</h4><p>Mehrere Pieces? Leg jede Liste mit <b>„In den Sammelkorb“</b> ab. Gleiche Dosen werden zusammengezählt, Staffelpreise zählen pro Marke.</p></li>
+        <li><h4>Bestellen</h4><p>Im <b>„Sammelkorb“</b> gibt es pro Marke ein <b>Warenkorb-Skript</b> für betterrun.shop, mit eigener Anleitung. Oder <b>„Liste kopieren“</b> und selbst bestellen.</p></li>
+      </ol>
+      <p class="gfoot"><b>Wird gespeichert:</b> Deine Einstellungen bei den Farbkarten, der Sammelkorb und gespeicherte Kombis bleiben in diesem Browser. Beim nächsten Besuch ist alles wieder da. Bilder werden nie gespeichert.</p>
+    </div>
+  </details>
 
   <div class="grid">
     <div class="stack">
@@ -502,6 +528,7 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
         <fieldset class="brandchecks" id="mixWrap" hidden><legend class="lbl">Diese Marken mischen</legend><div id="mixList" class="row"></div>
           <div class="row"><button class="btn small" id="mixDefault" type="button">Standardauswahl</button><button class="btn small" id="mixAll" type="button">Alle anhaken</button></div></fieldset>
 
+        <p class="prefnote" id="prefNote"><span><b>Bleibt gespeichert:</b> Farbart, Marken, Rollen und Auswahl merkt sich dein Browser auf diesem Gerät. <span class="ok" id="prefOk" aria-hidden="true">✓ gespeichert</span></span><button class="btn small" id="prefReset" type="button">Zurücksetzen</button></p>
         <p class="status" id="palStatus" role="status"></p>
       </section>
     </div>
@@ -707,13 +734,21 @@ try{
   const m=JSON.parse(localStorage.getItem(STORE_MATCH)||"null");
   if(m){ matchMode=m.mode==="mix"?"mix":"one"; matchBrand=m.brand||""; mixPick=(m.mix&&typeof m.mix==="object")?m.mix:{}; baseMode=m.base==="water"?"water":"solvent"; splitRoles=!!m.split; roleOne=(m.r1&&typeof m.r1==="object")?m.r1:{}; roleMix=(m.rm&&typeof m.rm==="object")?m.rm:{}; priceMode=["color","bal","cheap"].includes(m.pm)?m.pm:"color"; roleOff=(m.ro&&typeof m.ro==="object")?m.ro:{}; }
 }catch(e){}
-function saveMatch(){ try{ localStorage.setItem(STORE_MATCH,JSON.stringify({mode:matchMode,brand:matchBrand,mix:mixPick,base:baseMode,split:splitRoles,r1:roleOne,rm:roleMix,pm:priceMode,ro:roleOff})); }catch(e){} }
+/* Gewünschte Marken getrennt merken: Solange die Farbkarten noch laden oder eine Marke gerade ausgeblendet ist, wird sie ersetzt, aber nicht vergessen. */
+const pref={brand:matchBrand,r1:Object.assign({},roleOne),rm:Object.assign({},roleMix)};
+let prefOkT=0;
+function saveMatch(){
+  try{ localStorage.setItem(STORE_MATCH,JSON.stringify({mode:matchMode,brand:pref.brand||matchBrand,mix:mixPick,base:baseMode,split:splitRoles,r1:Object.assign({},roleOne,pref.r1),rm:Object.assign({},roleMix,pref.rm),pm:priceMode,ro:roleOff}));
+    const ok=document.getElementById("prefOk"); if(ok){ ok.classList.add("on"); clearTimeout(prefOkT); prefOkT=setTimeout(()=>ok.classList.remove("on"),1400); } }catch(e){}
+}
 function isWater(b){ const m=brandMeta.get(b); return m?m.water:/water\s*based|coversall/i.test(b); }
 function mixDefault(b){ const m=brandMeta.get(b); return m?m.mix:!brands.some(x=>brandMeta.has(x)); }
 function baseAllowed(b){ return (baseMode==="water")===isWater(b); }
 function visibleBrands(){ const v=brands.filter(baseAllowed); return v.length?v:brands; }
 function renderBrandLists(){
   const vis=visibleBrands();
+  if(pref.brand&&vis.includes(pref.brand)) matchBrand=pref.brand;
+  ROLES.forEach(r=>{ if(pref.r1[r]&&vis.includes(pref.r1[r])) roleOne[r]=pref.r1[r]; if(pref.rm[r]&&vis.includes(pref.rm[r])) roleMix[r]=pref.rm[r]; });
   if(!vis.includes(matchBrand)) matchBrand=vis[0]||"";
   const lowDef=vis.find(b=>pressureOf(b)==="low"&&mixDefault(b))||vis.find(b=>pressureOf(b)==="low")||vis[0]||"";
   if(!vis.includes(roleOne.fill)) roleOne.fill=matchBrand;
@@ -1613,7 +1648,8 @@ $("pickList").addEventListener("click",e=>{ const b=e.target.closest("button[dat
 $("wandBtn").addEventListener("click",()=>setWanding(!wanding));
 $("wandUndo").addEventListener("click",()=>{ masks.pop(); if(px) applyMask(); updateWandUi(); analyze(); });
 $("wandReset").addEventListener("click",()=>{ masks=[]; if(px) applyMask(); updateWandUi(); analyze(); });
-$("tol").addEventListener("input",e=>{ $("tolOut").textContent=e.target.value; });
+$("tol").addEventListener("input",e=>{ $("tolOut").textContent=e.target.value; try{ localStorage.setItem("dosenrechner.tol",e.target.value); }catch(_){} });
+try{ const t=localStorage.getItem("dosenrechner.tol"); if(t&&+t>=4&&+t<=40){ $("tol").value=t; $("tolOut").textContent=t; } }catch(_){}
 cv.addEventListener("click",e=>{ if(wanding) wandAt(toImg(e)); });
 function updateModeUi(){
   const photo=mode==="photo", pick=photo&&how==="pick", cmb=mode==="combo";
@@ -1734,7 +1770,7 @@ function copyText(text,okMsg,where){
 function setView(v){ view=v; $("viewOrig").setAttribute("aria-pressed",v==="orig"); $("viewCans").setAttribute("aria-pressed",v==="cans"); drawPreview(); }
 $("viewOrig").addEventListener("click",()=>setView("orig"));
 $("viewCans").addEventListener("click",()=>setView("cans"));
-$("brandSel").addEventListener("change",e=>{ matchBrand=e.target.value; save(); saveMatch(); matchAll(); });
+$("brandSel").addEventListener("change",e=>{ matchBrand=pref.brand=roleOne.fill=pref.r1.fill=e.target.value; save(); saveMatch(); matchAll(); });
 function setMatchMode(m){ matchMode=m; renderBrandLists(); renderMatchUi(); saveMatch(); matchAll(); }
 $("mOne").addEventListener("click",()=>setMatchMode("one"));
 function setPriceMode(m){ priceMode=m; renderMatchUi(); saveMatch(); matchAll(); }
@@ -1754,9 +1790,17 @@ $("roleWrap").addEventListener("change",e=>{
     clusters.forEach(c=>{ const n=fallbackRole(c.role); if(n!==c.role){ c.role=n; if(c.tap&&picks[c.tap-1]) picks[c.tap-1].role=n; } });
     matchAll(); return;
   }
-  const r=e.target.dataset.rb; if(!r) return; if(matchMode==="mix") roleMix[r]=e.target.value; else { roleOne[r]=e.target.value; if(r==="fill"){ matchBrand=e.target.value; save(); } } saveMatch(); matchAll(); });
+  const r=e.target.dataset.rb; if(!r) return; if(matchMode==="mix") roleMix[r]=pref.rm[r]=e.target.value; else { roleOne[r]=pref.r1[r]=e.target.value; if(r==="fill"){ matchBrand=pref.brand=e.target.value; save(); } } saveMatch(); matchAll(); });
 $("mMix").addEventListener("click",()=>setMatchMode("mix"));
 $("mixList").addEventListener("change",e=>{ const b=e.target.dataset.brand; if(b==null) return; mixPick[b]=e.target.checked; saveMatch(); matchAll(); });
+$("prefReset").addEventListener("click",()=>{
+  try{ [STORE_MATCH,STORE_BRAND,"dosenrechner.tol"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  matchMode="one"; matchBrand=""; mixPick={}; baseMode="solvent"; splitRoles=false; roleOne={}; roleMix={}; roleOff={}; priceMode="color";
+  pref.brand=""; pref.r1={}; pref.rm={};
+  $("tol").value=16; $("tolOut").textContent="16";
+  renderBrandLists(); renderMatchUi(); finderKey=""; syncFinderBrands(); matchAll();
+  $("palStatus").textContent="Einstellungen zurückgesetzt."; setTimeout(()=>{ if($("palStatus").textContent==="Einstellungen zurückgesetzt.") $("palStatus").textContent=""; },2500);
+});
 $("mixDefault").addEventListener("click",()=>{ mixPick={}; saveMatch(); renderBrandLists(); matchAll(); });
 $("mixAll").addEventListener("click",()=>{ visibleBrands().forEach(b=>mixPick[b]=true); saveMatch(); renderBrandLists(); matchAll(); });
 function setBase(m){ baseMode=m; saveMatch(); renderBrandLists(); fillFinderCans($("fBrand").value); matchAll(); }
