@@ -206,6 +206,29 @@ select.rolesel.low{border-style:dashed;color:var(--accent);border-color:var(--ac
 .subs .it:hover{background:var(--wall)}
 .subs .it:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
 .subs b{font-weight:600;color:var(--ink)}
+/* Farben aus dem Bild: Rollen-Auswahl schmal, Ersatz-Marken nicht umbrechen */
+td select.rolesel{min-width:0;width:auto}
+.subs .it{white-space:nowrap}
+/* Ist der Kasten schmal, wird jede Farbe zur Karte statt zur breiten Tabellenzeile */
+.colwrap{container-type:inline-size}
+@container (max-width:900px){
+  #colTable,#colTable tbody{display:block}
+  #colTable thead{display:none}
+  #colTable tr{display:grid;grid-template-columns:auto auto auto minmax(0,1fr);grid-template-areas:"inc pair pair qty" "inc sel sel sel" "inc role de share";gap:10px 12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+  #colTable td{display:block;padding:0;border:0;min-width:0}
+  #colTable td[colspan]{grid-column:1/-1}
+  #colTable .c-inc{grid-area:inc;align-self:start;padding-top:6px;max-width:72px}
+  #colTable .c-pair{grid-area:pair}
+  #colTable .c-pair .dl{margin-top:6px}
+  #colTable .c-qty{grid-area:qty;justify-self:end;align-self:start}
+  #colTable .c-sel{grid-area:sel}
+  #colTable .c-sel select{min-width:0;width:100%}
+  #colTable .c-role{grid-area:role}
+  #colTable .c-de{grid-area:de}
+  #colTable .c-share{grid-area:share;text-align:left;white-space:normal;font-size:12.5px;color:var(--muted)}
+  #colTable .c-share::before{content:"Anteil ";font-family:var(--font-body,inherit);text-transform:none}
+}
+
 .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .cans{display:flex;flex-wrap:wrap;gap:16px 10px;align-items:stretch;padding:10px 0 4px}
 .canwrap{display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -612,8 +635,8 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
 
       <section class="panel stack" aria-labelledby="h-colors">
         <h2 id="h-colors">Farben aus dem Bild</h2>
-        <div class="tablewrap">
-          <table>
+        <div class="tablewrap colwrap">
+          <table id="colTable">
             <thead><tr>
               <th>Malen</th><th id="thRole" hidden>Für</th><th>Bild → Dose</th><th>Dose und Ersatz</th><th>Treffer</th><th class="num">Anteil</th><th>Menge</th>
             </tr></thead>
@@ -1382,15 +1405,15 @@ function render(){
     const opts=optsList.map(a=>'<option value="'+a.p.i+'"'+(a.p.i===c.pick?" selected":"")+'>'+(matchMode==="mix"?esc(a.p.brand)+" · ":"")+esc(a.p.code)+' '+esc(a.p.name)+' – '+simPct(a.de)+' %'+(a.p.price!=null?' · '+eur(a.p.price):'')+'</option>').join("");
     const subs=imageSubs(c.lab,pal.brand,c.role).slice(0,3).map(q=>'<button type="button" class="it" data-i="'+i+'" data-pi="'+q.p.i+'" title="'+esc(q.p.brand+' '+q.p.code+' '+q.p.name)+' übernehmen"><span class="sw sm" style="background:'+q.p.hex+'"></span><b>'+esc(q.p.brand)+'</b> <span class="mono">'+esc(q.p.code)+'</span> '+deChip(q.de)+'</button>').join("");
     return '<tr class="'+(c.include?"":"off")+'">'+
-      '<td class="mid"><input type="checkbox" id="inc'+i+'" data-i="'+i+'"'+(c.include?" checked":"")+' aria-label="Farbe '+(i+1)+' malen">'+(c.isBg?'<span class="bgtag">Hintergrund</span>':'')+(c.extra?'<span class="xtag">Zusatz</span><button type="button" class="rmx" data-rmx="'+i+'">Entfernen</button>':'')+'</td>'+
-      (splitRoles?'<td class="mid"><select class="rolesel'+(HIGH_ROLES.has(c.role)?'':' low')+'" data-role="'+i+'" aria-label="Rolle für Farbe '+(i+1)+'">'+activeRoles().map(r=>'<option value="'+r+'"'+(r===c.role?' selected':'')+'>'+ROLE_LABEL[r]+'</option>').join("")+'</select></td>':'')+
-      '<td><div class="pair">'+(c.tap?'<span class="tapno">'+c.tap+'</span>':'')+'<span class="sw" style="background:'+(c.dl?'linear-gradient(135deg,'+c.hex+' 50%,'+c.hexT+' 50%)':c.hex)+'" title="'+(c.dl?'Bild '+c.hex+', Richtwert '+c.hexT:'Bild '+c.hex)+'"></span><span class="arrow">→</span><span class="sw" style="background:'+pal.hex+'" title="'+esc(pal.code)+' '+pal.hex+'"></span></div>'+
+      '<td class="mid c-inc"><input type="checkbox" id="inc'+i+'" data-i="'+i+'"'+(c.include?" checked":"")+' aria-label="Farbe '+(i+1)+' malen">'+(c.isBg?'<span class="bgtag">Hintergrund</span>':'')+(c.extra?'<span class="xtag">Zusatz</span><button type="button" class="rmx" data-rmx="'+i+'">Entfernen</button>':'')+'</td>'+
+      (splitRoles?'<td class="mid c-role"><select class="rolesel'+(HIGH_ROLES.has(c.role)?'':' low')+'" data-role="'+i+'" aria-label="Rolle für Farbe '+(i+1)+'">'+activeRoles().map(r=>'<option value="'+r+'"'+(r===c.role?' selected':'')+'>'+ROLE_LABEL[r]+'</option>').join("")+'</select></td>':'')+
+      '<td class="c-pair"><div class="pair">'+(c.tap?'<span class="tapno">'+c.tap+'</span>':'')+'<span class="sw" style="background:'+(c.dl?'linear-gradient(135deg,'+c.hex+' 50%,'+c.hexT+' 50%)':c.hex)+'" title="'+(c.dl?'Bild '+c.hex+', Richtwert '+c.hexT:'Bild '+c.hex)+'"></span><span class="arrow">→</span><span class="sw" style="background:'+pal.hex+'" title="'+esc(pal.code)+' '+pal.hex+'"></span></div>'+
         '<div class="dl"><button type="button" data-dl="'+i+'" data-d="-1" aria-pressed="'+((c.dl||0)<0)+'" aria-label="Richtwert für Farbe '+(i+1)+' dunkler"'+((c.dl||0)<=-DL_MAX?' disabled':'')+'>dunkler</button><button type="button" data-dl="'+i+'" data-d="1" aria-pressed="'+((c.dl||0)>0)+'" aria-label="Richtwert für Farbe '+(i+1)+' heller"'+((c.dl||0)>=DL_MAX?' disabled':'')+'>heller</button></div>'+
         (c.dl?'<div class="dlinfo">'+Math.abs(c.dl)+'× '+(c.dl>0?'heller':'dunkler')+'<button type="button" data-dl0="'+i+'">zurück</button></div>':'')+'</td>'+
-      '<td><select id="sel'+i+'" data-i="'+i+'" aria-label="Dose für Farbe '+(i+1)+'">'+opts+'</select>'+(subs?'<div class="subs">Andere Marken: '+subs+'</div>':'')+'</td>'+
-      '<td class="mid">'+deChip(d)+(c.priceSwap?'<span class="pricechip" title="Wegen des Preises statt '+esc(palette[c.best].brand+' '+palette[c.best].code)+' gewählt">günstiger</span>':'')+'</td>'+
-      '<td class="num">'+(c.extra?'–':nf1.format(c.share*100)+' %')+'</td>'+
-      '<td><span class="qty sm"><button type="button" data-ci="'+i+'" data-d="-1" aria-label="Eine Dose weniger für Farbe '+(i+1)+'">−</button><input type="number" min="0" step="1" value="'+(c.qty??1)+'" data-cqi="'+i+'" aria-label="Dosen für Farbe '+(i+1)+'"><button type="button" data-ci="'+i+'" data-d="1" aria-label="Eine Dose mehr für Farbe '+(i+1)+'">+</button></span></td></tr>';
+      '<td class="c-sel"><select id="sel'+i+'" data-i="'+i+'" aria-label="Dose für Farbe '+(i+1)+'">'+opts+'</select>'+(subs?'<div class="subs">Andere Marken: '+subs+'</div>':'')+'</td>'+
+      '<td class="mid c-de">'+deChip(d)+(c.priceSwap?'<span class="pricechip" title="Wegen des Preises statt '+esc(palette[c.best].brand+' '+palette[c.best].code)+' gewählt">günstiger</span>':'')+'</td>'+
+      '<td class="num c-share">'+(c.extra?'–':nf1.format(c.share*100)+' %')+'</td>'+
+      '<td class="c-qty"><span class="qty sm"><button type="button" data-ci="'+i+'" data-d="-1" aria-label="Eine Dose weniger für Farbe '+(i+1)+'">−</button><input type="number" min="0" step="1" value="'+(c.qty??1)+'" data-cqi="'+i+'" aria-label="Dosen für Farbe '+(i+1)+'"><button type="button" data-ci="'+i+'" data-d="1" aria-label="Eine Dose mehr für Farbe '+(i+1)+'">+</button></span></td></tr>';
   }).join("");
   const groups=[]; r.list.forEach(e=>{const q=palette[e.pi], b=q.brand; let g=groups.find(x=>x.brand===b); if(!g){g={brand:b,items:[],total:0,cost:0,missing:0};groups.push(g);} g.items.push(e); g.total+=e.count; if(q.price!=null) g.cost+=q.price*e.count; else g.missing+=e.count;});
   const costAll=groups.reduce((a,g)=>a+g.cost,0), missAll=groups.reduce((a,g)=>a+g.missing,0);
