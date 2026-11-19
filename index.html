@@ -214,6 +214,21 @@ td select.rolesel{min-width:0;width:auto}
 /* Ist der Kasten schmal, wird jede Farbe zur Karte statt zur breiten Tabellenzeile */
 .colwrap{container-type:inline-size}
 #colTable td.c-subs{display:none}
+details.alt>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);font-weight:600}
+details.alt>summary::-webkit-details-marker{display:none}
+details.alt>summary:hover{color:var(--ink)}
+details.alt>summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
+details.alt>summary svg{transition:transform .15s}
+details.alt[open]>summary svg{transform:rotate(180deg)}
+details.alt .subs{margin-top:6px}
+.addcol{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:12px 14px;border:2px dashed var(--line);border-radius:12px}
+.addcol b{font-size:14px;margin-right:4px}
+.addcol label{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.addcol select{width:auto;font-size:13px;padding:4px 8px}
+.addcol .colorbtn{position:relative;overflow:hidden}
+.addcol .colorbtn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;padding:0;border:0}
+.addcol .st{flex-basis:100%;font-size:12.5px;color:var(--muted);margin:0}
+.addcol .st:empty{display:none}
 @container (max-width:900px){
   #colTable,#colTable tbody{display:block}
   #colTable thead{display:none}
@@ -231,6 +246,7 @@ td select.rolesel{min-width:0;width:auto}
   #colTable .c-de{grid-area:de}
   #colTable .c-share{grid-area:share;text-align:left;white-space:normal;font-family:var(--font-body);font-size:12.5px;color:var(--muted)}
   #colTable .c-share::before{content:"Anteil "}
+  #colTable .c-share:empty{display:none}
   #colTable td.c-subs{display:block;grid-area:subs}
   #colTable .c-subs .subs{margin:0;gap:2px 14px}
   #colTable .c-subs .de{border:0;padding:0;font-weight:600}
@@ -405,7 +421,7 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
     <div class="hbody">
       <ol class="steps">
         <li><h4>Bild rein</h4><p>Bei <b>„Bild“</b> wählst du <b>Skizze</b>, <b>Foto vom Piece</b> oder <b>Farbkombi</b> und tippst auf <b>„Bild hochladen“</b>. Zum Ausprobieren gibt es <b>„Beispiel“</b>.</p></li>
-        <li><h4>Farben sauber kriegen</h4><p>Bei Fotos nimmt <b>„Untergrund antippen“</b> Wand, Zug oder Himmel raus, <b>„Ausschnitt wählen“</b> schneidet zu. Fehlen Farben, schieb <b>„Anzahl Farben“</b> hoch. Oder tipp sie mit <b>„Selbst antippen“</b> einzeln an.</p></li>
+        <li><h4>Farben sauber kriegen</h4><p>Bei Fotos nimmt <b>„Untergrund antippen“</b> Wand, Zug oder Himmel raus, <b>„Ausschnitt wählen“</b> schneidet zu. Fehlen Farben, schieb <b>„Anzahl Farben“</b> hoch. Oder tipp sie mit <b>„Selbst antippen“</b> einzeln an. Fehlt eine, z.&nbsp;B. Weiß für Highlights: <b>„Farbe fehlt?“</b> unter der Liste.</p></li>
         <li><h4>Marken einstellen</h4><p>Bei <b>„Farbkarten“</b>: <b>„Eine Marke“</b> oder <b>„Markenmix“</b>. Mit <b>„Nach Rolle trennen“</b> bekommt Fill z.&nbsp;B. High Pressure und Outline Low Pressure. Rollen, die im Piece nicht vorkommen, hakst du ab.</p></li>
         <li><h4>Liste prüfen</h4><p>Die <b>„Einkaufsliste“</b> zeigt pro Farbe die passende Dose. Wie viele Dosen du brauchst, stellst du mit <b>−</b> und <b>+</b> ein. Wirkt eine Bildfarbe zu dunkel oder zu hell, verschiebst du sie mit <b>„heller“</b> oder <b>„dunkler“</b>. Passt eine Dose nicht, tauschst du sie bei <b>„Ersatz finden“</b>.</p></li>
         <li><h4>Sammeln</h4><p>Mehrere Pieces? Leg jede Liste mit <b>„In den Sammelkorb“</b> ab. Gleiche Dosen werden zusammengezählt, Staffelpreise zählen pro Marke.</p></li>
@@ -657,6 +673,13 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
             <tbody id="rows"></tbody>
           </table>
         </div>
+        <div class="addcol" id="addColBar">
+          <b>Farbe fehlt?</b>
+          <button class="btn small" id="addColTap" type="button" aria-pressed="false">Im Bild antippen</button>
+          <span class="btn small colorbtn">Farbe wählen<input type="color" id="addColPick" value="#ffffff" aria-label="Farbe wählen und hinzufügen"></span>
+          <label id="addColRoleWrap">als <select id="addColRole" aria-label="Rolle der neuen Farbe"></select></label>
+          <p class="st" id="addColStatus" role="status"></p>
+        </div>
         <p class="hint">Der Hintergrund (Papier oder Wand am Bildrand) wird automatisch erkannt und nicht mitgerechnet. Hak ihn an, wenn du ihn malen willst. Fallen zwei Bildfarben auf dieselbe Dose, werden sie in der Einkaufsliste zusammengezählt. Bei „Nach Rolle trennen“ schätzt der Rechner die Rolle jeder Farbe: große Flächen sind Fill, der Hintergrund ist Background, dünne Linien und kleine Flächen sind Outline, helle davon Highlights. Inline und Backline stellst du selbst über das Auswahlfeld in der Spalte „Für“ ein.</p>
       </section>
 
@@ -834,7 +857,7 @@ function renderMatchUi(){
   $("roleWrap").hidden=!splitRoles;
   ROLES.forEach(r=>{ const C=r[0].toUpperCase()+r.slice(1), on=isRoleOn(r); $("ro"+C).checked=on; $("rb"+C).disabled=!on; $("rb"+C).classList.toggle("off",!on); document.querySelector('[data-rl="'+r+'"]').classList.toggle("off",!on); });
   $("oneWrap").hidden=matchMode!=="one"||splitRoles;
-  $("thRole").hidden=!splitRoles;
+  $("thRole").hidden=!splitRoles; if(typeof renderAddColRole==="function") renderAddColRole();
   $("roleHint").textContent=!splitRoles
     ? "Jede Farbe bekommt die Dose, die am besten passt, egal wie viel Druck sie hat."
     : (matchMode==="one"
@@ -1426,8 +1449,8 @@ function render(){
         (c.dl?'<div class="dlinfo">'+Math.abs(c.dl)+'× '+(c.dl>0?'heller':'dunkler')+'<button type="button" data-dl0="'+i+'">zurück</button></div>':'')+'</td>'+
       '<td class="c-sel"><select id="sel'+i+'" data-i="'+i+'" aria-label="Dose für Farbe '+(i+1)+'">'+opts+'</select>'+(subs?'<div class="subs">Andere Marken: '+subs+'</div>':'')+'</td>'+
       '<td class="mid c-de">'+deChip(d)+(c.priceSwap?'<span class="pricechip" title="Wegen des Preises statt '+esc(palette[c.best].brand+' '+palette[c.best].code)+' gewählt">günstiger</span>':'')+'</td>'+
-      '<td class="num c-share">'+(c.extra?'–':nf1.format(c.share*100)+' %')+'</td>'+
-      '<td class="c-subs">'+(subs?'<div class="subs">Andere Marken: '+subs+'</div>':'')+'</td>'+
+      '<td class="num c-share">'+(c.extra?'':nf1.format(c.share*100)+' %')+'</td>'+
+      '<td class="c-subs">'+(subs?'<details class="alt" data-alt="'+i+'"'+(c.altOpen?' open':'')+'><summary>Andere Marken ('+(subs.match(/class="it"/g)||[]).length+')<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.5"/></svg></summary><div class="subs">'+subs+'</div></details>':'')+'</td>'+
       '<td class="c-qty"><span class="qty sm"><button type="button" data-ci="'+i+'" data-d="-1" aria-label="Eine Dose weniger für Farbe '+(i+1)+'">−</button><input type="number" min="0" step="1" value="'+(c.qty??1)+'" data-cqi="'+i+'" aria-label="Dosen für Farbe '+(i+1)+'"><button type="button" data-ci="'+i+'" data-d="1" aria-label="Eine Dose mehr für Farbe '+(i+1)+'">+</button></span></td></tr>';
   }).join("");
   const groups=[]; r.list.forEach(e=>{const q=palette[e.pi], b=q.brand; let g=groups.find(x=>x.brand===b); if(!g){g={brand:b,items:[],total:0,cost:0,missing:0};groups.push(g);} g.items.push(e); g.total+=e.count; if(q.price!=null) g.cost+=q.price*e.count; else g.missing+=e.count;});
@@ -1586,6 +1609,7 @@ function loadFile(file){
 /* ---------- Ausschnitt ---------- */
 let cropping=false, dragStart=null, dragRect=null;
 function setCropping(on){
+  if(on && addPicking) setAddPicking(false);
   if(on){ setWanding(false); setPicking(false); }
   cropping=on; $("cropBtn").setAttribute("aria-pressed",on); $("cropBtn").textContent=on?"Rahmen ziehen …":"Ausschnitt wählen";
   $("drop").classList.toggle("cropping",on); drawPreview();
@@ -1615,7 +1639,7 @@ function updateWandUi(){
   $("tolWrap").hidden=!wanding;
   $("wandUndo").hidden=!masks.length; $("wandReset").hidden=!masks.length;
 }
-function setWanding(on){ if(on && cropping) setCropping(false); if(on) setPicking(false); wanding=on; updateWandUi(); }
+function setWanding(on){ if(on && addPicking) setAddPicking(false); if(on && cropping) setCropping(false); if(on) setPicking(false); wanding=on; updateWandUi(); }
 function wandAt(p){
   if(!px) return;
   const cvs=$("preview"), W=px.w, H=px.h;
@@ -1711,6 +1735,7 @@ function updateModeUi(){
   $("photoOpts").hidden=!photo;
   $("comboOpts").hidden=!cmb; $("drop").hidden=cmb; $("viewRow").hidden=cmb; $("uploadRow").hidden=cmb; $("uploadLocal").hidden=cmb;
   $("h-colors").textContent=cmb?"Farben der Kombi":"Farben aus dem Bild";
+  $("addColBar").hidden=cmb; if(cmb&&addPicking) setAddPicking(false);
   $("howAuto").setAttribute("aria-pressed",!pick); $("howPick").setAttribute("aria-pressed",pick);
   $("autoTools").hidden=pick; $("pickTools").hidden=!pick; $("kWrap").hidden=pick||cmb;
   $("modeHint").textContent = cmb
@@ -1875,6 +1900,38 @@ $("finderOut").addEventListener("click",e=>{
 });
 $("finderCtx").addEventListener("click",e=>{ if(e.target.closest("[data-ctxoff]")){ finderCtx=null; renderFinder(); } });
 $("addExtra").addEventListener("click",()=>{ finderCtx=null; renderFinder(); $("finder").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"}); $("fBrand").focus(); });
+$("rows").addEventListener("toggle",e=>{ const d=e.target; if(!d.matches||!d.matches("details.alt")) return; const c=clusters[+d.dataset.alt]; if(c) c.altOpen=d.open; },true);
+/* Farbe hinzufügen: fehlt eine Farbe (z. B. Weiß für Highlights), kommt sie als Zusatzfarbe in die Liste. Sie bleibt, auch wenn das Bild neu ausgewertet wird. */
+var addPicking=false;
+function renderAddColRole(){
+  const sel=$("addColRole"), cur=sel.value||"highlight", act=activeRoles();
+  sel.innerHTML=act.map(r=>'<option value="'+r+'">'+ROLE_LABEL[r]+'</option>').join("");
+  sel.value=act.includes(cur)?cur:fallbackRole("highlight");
+  $("addColRoleWrap").hidden=!splitRoles;
+}
+function addColour(smp){
+  const role=splitRoles?$("addColRole").value:"highlight";
+  const c={rgb:smp.rgb,hex:smp.hex,lab:smp.lab,share:0,include:true,isBg:false,role:fallbackRole(role),qty:1,extra:true};
+  extras.push(c); matchAll(); renderFinder();
+  $("addColStatus").textContent="Farbe "+smp.hex.toUpperCase()+" hinzugefügt"+(splitRoles?" als "+ROLE_LABEL[c.role]:"")+". Du findest sie unten in der Liste.";
+}
+function setAddPicking(on){
+  addPicking=!!on && !!img;
+  if(addPicking){ setCropping(false); setWanding(false); if(picking) setPicking(false); }
+  $("drop").classList.toggle("picking",addPicking||picking); $("loupe").hidden=true;
+  const b=$("addColTap"); b.setAttribute("aria-pressed",addPicking); b.textContent=addPicking?"Abbrechen":"Im Bild antippen"; b.classList.toggle("primary",addPicking);
+  if(addPicking){ $("addColStatus").textContent="Tipp im Bild auf die Farbe, die fehlt. Die Lupe zeigt dir, wo du landest."; $("drop").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"center"}); }
+}
+$("addColTap").addEventListener("click",()=>{ if(!img){ $("addColStatus").textContent="Lad zuerst ein Bild hoch oder nimm „Farbe wählen“."; return; } setAddPicking(!addPicking); if(!addPicking) $("addColStatus").textContent=""; });
+$("addColPick").addEventListener("change",e=>{ const rgb=hexToRgb(e.target.value); addColour({rgb,hex:e.target.value,lab:srgbToLab(...rgb)}); });
+cv.addEventListener("pointermove",e=>{ if(!addPicking||!img) return; drawLoupe(e,toImg(e)); });
+cv.addEventListener("pointerdown",e=>{ if(!addPicking||!img) return; e.preventDefault(); try{cv.setPointerCapture(e.pointerId);}catch(_){}; drawLoupe(e,toImg(e)); });
+cv.addEventListener("pointerup",e=>{ if(!addPicking||!img||cropping||wanding) return; $("loupe").hidden=true;
+  const smp=sampleAt(toImg(e));
+  if(!smp){ $("addColStatus").textContent="An der Stelle ist nichts vom Bild, die ist ausgeblendet. Tipp woanders hin oder nimm „Farbe wählen“."; return; }
+  setAddPicking(false); addColour(smp);
+  $("addColBar").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"center"});
+});
 $("rows").addEventListener("click",e=>{
   const b=e.target.closest("[data-rmx]"); if(!b) return; const c=clusters[+b.dataset.rmx]; if(!c||!c.extra) return;
   extras=extras.filter(x=>x!==c); clusters=clusters.filter(x=>x!==c); optimizePrice(); render(); renderFinder();
