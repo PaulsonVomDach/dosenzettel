@@ -178,6 +178,12 @@ td.mid{padding-top:14px}
 .sw.sm{width:16px;height:16px;border-width:1px;border-radius:3px}
 .pair{display:flex;align-items:center;gap:6px}
 .arrow{color:var(--muted);font-size:13px}
+.dl{display:flex;gap:4px;margin-top:6px}
+.dl button{font:inherit;font-size:11px;font-weight:700;padding:2px 7px;border:1.5px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);cursor:pointer;white-space:nowrap}
+.dl button:hover{border-color:var(--ink)}
+.dl button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.dlinfo{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap}
+.dlinfo button{font:inherit;font-size:11px;font-weight:700;color:var(--accent);background:none;border:0;padding:0 0 0 4px;cursor:pointer;text-decoration:underline}
 td select{min-width:220px;padding:5px 7px;font-size:13px}
 .de{font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap;border:1.5px solid currentColor;display:inline-block}
 .de.good{color:var(--good)} .de.warn{color:var(--warn)} .de.bad{color:var(--bad)}
@@ -364,7 +370,7 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
         <li><h4>Bild rein</h4><p>Bei <b>„Bild“</b> wählst du <b>Skizze</b>, <b>Foto vom Piece</b> oder <b>Farbkombi</b> und tippst auf <b>„Bild hochladen“</b>. Zum Ausprobieren gibt es <b>„Beispiel“</b>.</p></li>
         <li><h4>Farben sauber kriegen</h4><p>Bei Fotos nimmt <b>„Untergrund antippen“</b> Wand, Zug oder Himmel raus, <b>„Ausschnitt wählen“</b> schneidet zu. Fehlen Farben, schieb <b>„Anzahl Farben“</b> hoch. Oder tipp sie mit <b>„Selbst antippen“</b> einzeln an.</p></li>
         <li><h4>Marken einstellen</h4><p>Bei <b>„Farbkarten“</b>: <b>„Eine Marke“</b> oder <b>„Markenmix“</b>. Mit <b>„Nach Rolle trennen“</b> bekommt Fill z.&nbsp;B. High Pressure und Outline Low Pressure. Rollen, die im Piece nicht vorkommen, hakst du ab.</p></li>
-        <li><h4>Liste prüfen</h4><p>Die <b>„Einkaufsliste“</b> zeigt pro Farbe die passende Dose. Wie viele Dosen du brauchst, stellst du mit <b>−</b> und <b>+</b> ein. Passt eine Dose nicht, tauschst du sie bei <b>„Ersatz finden“</b>.</p></li>
+        <li><h4>Liste prüfen</h4><p>Die <b>„Einkaufsliste“</b> zeigt pro Farbe die passende Dose. Wie viele Dosen du brauchst, stellst du mit <b>−</b> und <b>+</b> ein. Wirkt eine Bildfarbe zu dunkel oder zu hell, verschiebst du sie mit <b>„heller“</b> oder <b>„dunkler“</b>. Passt eine Dose nicht, tauschst du sie bei <b>„Ersatz finden“</b>.</p></li>
         <li><h4>Sammeln</h4><p>Mehrere Pieces? Leg jede Liste mit <b>„In den Sammelkorb“</b> ab. Gleiche Dosen werden zusammengezählt, Staffelpreise zählen pro Marke.</p></li>
         <li><h4>Bestellen</h4><p>Im <b>„Sammelkorb“</b> gibt es pro Marke ein <b>Warenkorb-Skript</b> für betterrun.shop, mit eigener Anleitung. Oder <b>„Liste kopieren“</b> und selbst bestellen.</p></li>
       </ol>
@@ -968,10 +974,10 @@ function estimateRoles(){
 /* Selbst angetippte Farben: jedes Pixel zur nächsten Tipp-Farbe, zu weit weg = nicht gemalt */
 /* Mengen bleiben erhalten, wenn die Farben neu erkannt werden (z. B. anderer Regler-Wert) */
 function carryQty(prev){
-  clusters.forEach(c=>{ let best=null,bd=10; prev.forEach(p=>{ const d=Math.hypot(c.lab[0]-p.lab[0],c.lab[1]-p.lab[1],c.lab[2]-p.lab[2]); if(d<bd){bd=d;best=p;} }); c.qty=best?best.qty:1; });
+  clusters.forEach(c=>{ let best=null,bd=10; prev.forEach(p=>{ const d=Math.hypot(c.lab[0]-p.lab[0],c.lab[1]-p.lab[1],c.lab[2]-p.lab[2]); if(d<bd){bd=d;best=p;} }); c.qty=best?best.qty:1; c.dl=best?best.dl||0:0; });
 }
 function analyzePicks(){
-  const prevQ=clusters.filter(c=>!c.extra).map(c=>({lab:c.lab,qty:c.qty||1}));
+  const prevQ=clusters.filter(c=>!c.extra).map(c=>({lab:c.lab0||c.lab,qty:c.qty||1,dl:c.dl||0}));
   const n=px.w*px.h, L=px.lab; clusters=[]; assign=new Int16Array(n).fill(-1);
   if(!picks.length){ matchAll(); return; }
   const cnt=new Array(picks.length).fill(0); let valid=0;
@@ -1008,7 +1014,7 @@ function analyze(){
     s.n++; s.r+=px.rgb[i*3]; s.g+=px.rgb[i*3+1]; s.b+=px.rgb[i*3+2]; s.l+=px.lab[i*3]; s.a+=px.lab[i*3+1]; s.bb+=px.lab[i*3+2];
     if(px.border[i]){s.border++;bt++;}
   }
-  const prevQ=clusters.filter(c=>!c.extra).map(c=>({lab:c.lab,qty:c.qty||1}));
+  const prevQ=clusters.filter(c=>!c.extra).map(c=>({lab:c.lab0||c.lab,qty:c.qty||1,dl:c.dl||0}));
   const map=new Map(); clusters=[];
   st.forEach((s,ci)=>{
     if(!s.n) return; map.set(ci,clusters.length);
@@ -1037,11 +1043,19 @@ function matchCluster(c){
   c.alts=nearest(c.lab,poolFilter(c.role),6); c.pick=c.alts.length?c.alts[0].p.i:-1; c.best=c.pick; c.manual=false;
   if(c.pinKey){ const p=palette.find(q=>q.brand+"|"+q.code===c.pinKey); if(p){ c.pick=p.i; c.manual=true; if(!c.alts.some(a=>a.p.i===p.i)) c.alts=[{p,de:deLab(c.lab,p.lab)},...c.alts]; } }
 }
+/* Richtwert heller oder dunkler: verschiebt nur die Helligkeit (L*) der Bildfarbe, Farbton bleibt. Ein Schritt = 6 L*. */
+const DL_STEP=6, DL_MAX=4;
+function applyDl(c){
+  if(!c.lab0) c.lab0=c.lab;
+  const d=(c.dl||0)*DL_STEP;
+  c.lab=d?[Math.max(0,Math.min(100,c.lab0[0]+d)),c.lab0[1],c.lab0[2]]:c.lab0;
+  c.hexT=d?rgbToHex(...labToRgb(...c.lab)):c.hex;
+}
 /* Zusätzliche Dosen, die nicht aus dem Bild kommen. Sie bleiben, auch wenn das Bild neu ausgewertet wird. */
 let extras=[];
 function matchAll(){
   clusters=clusters.filter(c=>!c.extra).concat(extras);
-  clusters.forEach(matchCluster);
+  clusters.forEach(c=>{ applyDl(c); matchCluster(c); });
   optimizePrice();
   render();
 }
@@ -1148,7 +1162,7 @@ function buildCombo(){
   const prev=new Map(clusters.filter(c=>c.slotId!=null).map(c=>[c.slotId,c]));
   const tot=combo.slots.reduce((a,sl)=>a+(ROLE_WEIGHT[sl.role]||1),0)||1;
   clusters=combo.slots.map(sl=>{ const rgb=hexToRgb(sl.hex), o=prev.get(sl.id);
-    return {rgb,hex:sl.hex,lab:srgbToLab(...rgb),share:(ROLE_WEIGHT[sl.role]||1)/tot,include:o?o.include:true,isBg:false,role:fallbackRole(sl.role),qty:sl.qty??1,slotId:sl.id,pinKey:sl.can||null}; });
+    return {rgb,hex:sl.hex,lab:srgbToLab(...rgb),share:(ROLE_WEIGHT[sl.role]||1)/tot,include:o?o.include:true,isBg:false,role:fallbackRole(sl.role),qty:sl.qty??1,dl:o?o.dl||0:0,slotId:sl.id,pinKey:sl.can||null}; });
   clusters.sort((a,b)=>b.share-a.share);
   saveCombo(); matchAll();
 }
@@ -1370,7 +1384,9 @@ function render(){
     return '<tr class="'+(c.include?"":"off")+'">'+
       '<td class="mid"><input type="checkbox" id="inc'+i+'" data-i="'+i+'"'+(c.include?" checked":"")+' aria-label="Farbe '+(i+1)+' malen">'+(c.isBg?'<span class="bgtag">Hintergrund</span>':'')+(c.extra?'<span class="xtag">Zusatz</span><button type="button" class="rmx" data-rmx="'+i+'">Entfernen</button>':'')+'</td>'+
       (splitRoles?'<td class="mid"><select class="rolesel'+(HIGH_ROLES.has(c.role)?'':' low')+'" data-role="'+i+'" aria-label="Rolle für Farbe '+(i+1)+'">'+activeRoles().map(r=>'<option value="'+r+'"'+(r===c.role?' selected':'')+'>'+ROLE_LABEL[r]+'</option>').join("")+'</select></td>':'')+
-      '<td><div class="pair">'+(c.tap?'<span class="tapno">'+c.tap+'</span>':'')+'<span class="sw" style="background:'+c.hex+'" title="Bild '+c.hex+'"></span><span class="arrow">→</span><span class="sw" style="background:'+pal.hex+'" title="'+esc(pal.code)+' '+pal.hex+'"></span></div></td>'+
+      '<td><div class="pair">'+(c.tap?'<span class="tapno">'+c.tap+'</span>':'')+'<span class="sw" style="background:'+(c.dl?'linear-gradient(135deg,'+c.hex+' 50%,'+c.hexT+' 50%)':c.hex)+'" title="'+(c.dl?'Bild '+c.hex+', Richtwert '+c.hexT:'Bild '+c.hex)+'"></span><span class="arrow">→</span><span class="sw" style="background:'+pal.hex+'" title="'+esc(pal.code)+' '+pal.hex+'"></span></div>'+
+        '<div class="dl"><button type="button" data-dl="'+i+'" data-d="-1" aria-pressed="'+((c.dl||0)<0)+'" aria-label="Richtwert für Farbe '+(i+1)+' dunkler"'+((c.dl||0)<=-DL_MAX?' disabled':'')+'>dunkler</button><button type="button" data-dl="'+i+'" data-d="1" aria-pressed="'+((c.dl||0)>0)+'" aria-label="Richtwert für Farbe '+(i+1)+' heller"'+((c.dl||0)>=DL_MAX?' disabled':'')+'>heller</button></div>'+
+        (c.dl?'<div class="dlinfo">'+Math.abs(c.dl)+'× '+(c.dl>0?'heller':'dunkler')+'<button type="button" data-dl0="'+i+'">zurück</button></div>':'')+'</td>'+
       '<td><select id="sel'+i+'" data-i="'+i+'" aria-label="Dose für Farbe '+(i+1)+'">'+opts+'</select>'+(subs?'<div class="subs">Andere Marken: '+subs+'</div>':'')+'</td>'+
       '<td class="mid">'+deChip(d)+(c.priceSwap?'<span class="pricechip" title="Wegen des Preises statt '+esc(palette[c.best].brand+' '+palette[c.best].code)+' gewählt">günstiger</span>':'')+'</td>'+
       '<td class="num">'+(c.extra?'–':nf1.format(c.share*100)+' %')+'</td>'+
@@ -1741,6 +1757,13 @@ function setCanQty(pi,v){
   cl.forEach(syncSlot);
   optimizePrice(); render();
 }
+$("rows").addEventListener("click",e=>{
+  const b=e.target.closest("[data-dl],[data-dl0]"); if(!b) return;
+  const reset=b.hasAttribute("data-dl0"), i=+(reset?b.dataset.dl0:b.dataset.dl), c=clusters[i]; if(!c) return;
+  c.dl=reset?0:Math.max(-DL_MAX,Math.min(DL_MAX,(c.dl||0)+(+b.dataset.d)));
+  applyDl(c); matchCluster(c); optimizePrice(); render();
+  const nb=document.querySelector(reset?'[data-dl="'+i+'"][data-d="1"]':'[data-dl="'+i+'"][data-d="'+b.dataset.d+'"]'); if(nb&&!nb.disabled) nb.focus();
+});
 $("rows").addEventListener("click",e=>{
   const b=e.target.closest("[data-ci]"); if(!b) return;
   const i=+b.dataset.ci, c=clusters[i]; if(!c) return;
