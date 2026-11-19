@@ -178,10 +178,12 @@ td.mid{padding-top:14px}
 .sw.sm{width:16px;height:16px;border-width:1px;border-radius:3px}
 .pair{display:flex;align-items:center;gap:6px}
 .arrow{color:var(--muted);font-size:13px}
-.dl{display:flex;gap:4px;margin-top:6px}
-.dl button{font:inherit;font-size:11px;font-weight:700;padding:2px 7px;border:1.5px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);cursor:pointer;white-space:nowrap}
-.dl button:hover{border-color:var(--ink)}
-.dl button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.dl{display:inline-flex;margin-top:6px;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}
+.dl button{font:inherit;font-size:11px;font-weight:600;padding:2px 8px;border:0;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
+.dl button+button{border-left:1.5px solid var(--line)}
+.dl button:hover:not(:disabled){color:var(--ink);background:var(--wall)}
+.dl button:disabled{opacity:.4;cursor:default}
+.dl button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
 .dlinfo{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap}
 .dlinfo button{font:inherit;font-size:11px;font-weight:700;color:var(--accent);background:none;border:0;padding:0 0 0 4px;cursor:pointer;text-decoration:underline}
 td select{min-width:220px;padding:5px 7px;font-size:13px}
@@ -211,22 +213,34 @@ td select.rolesel{min-width:0;width:auto}
 .subs .it{white-space:nowrap}
 /* Ist der Kasten schmal, wird jede Farbe zur Karte statt zur breiten Tabellenzeile */
 .colwrap{container-type:inline-size}
+#colTable td.c-subs{display:none}
 @container (max-width:900px){
   #colTable,#colTable tbody{display:block}
   #colTable thead{display:none}
-  #colTable tr{display:grid;grid-template-columns:auto auto auto minmax(0,1fr);grid-template-areas:"inc pair pair qty" "inc sel sel sel" "inc role de share";gap:10px 12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+  #colTable tr{display:grid;grid-template-columns:auto auto auto auto minmax(0,1fr) auto;grid-template-areas:"inc pair sel sel sel sel" "inc pair role de share qty" "inc pair subs subs subs subs";gap:8px 14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}
   #colTable td{display:block;padding:0;border:0;min-width:0}
   #colTable td[colspan]{grid-column:1/-1}
-  #colTable .c-inc{grid-area:inc;align-self:start;padding-top:6px;max-width:72px}
-  #colTable .c-pair{grid-area:pair}
-  #colTable .c-pair .dl{margin-top:6px}
-  #colTable .c-qty{grid-area:qty;justify-self:end;align-self:start}
+  #colTable .c-inc{grid-area:inc;align-self:start;padding-top:8px;max-width:72px}
+  #colTable .c-pair{grid-area:pair;align-self:start}
+  #colTable .c-qty{grid-area:qty;justify-self:end}
   #colTable .c-sel{grid-area:sel}
   #colTable .c-sel select{min-width:0;width:100%}
+  #colTable .c-sel .subs{display:none}
   #colTable .c-role{grid-area:role}
+  #colTable .c-role select{font-size:12px;padding:2px 6px}
   #colTable .c-de{grid-area:de}
-  #colTable .c-share{grid-area:share;text-align:left;white-space:normal;font-size:12.5px;color:var(--muted)}
-  #colTable .c-share::before{content:"Anteil ";font-family:var(--font-body,inherit);text-transform:none}
+  #colTable .c-share{grid-area:share;text-align:left;white-space:normal;font-family:var(--font-body);font-size:12.5px;color:var(--muted)}
+  #colTable .c-share::before{content:"Anteil "}
+  #colTable td.c-subs{display:block;grid-area:subs}
+  #colTable .c-subs .subs{margin:0;gap:2px 14px}
+  #colTable .c-subs .de{border:0;padding:0;font-weight:600}
+  #colTable .c-subs .it{margin-right:0}
+}
+@container (max-width:560px){
+  #colTable tr{grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-areas:"inc pair pair qty" "inc pair pair share" "inc sel sel sel" "inc role de de" "inc subs subs subs"}
+  #colTable .c-qty{align-self:start}
+  #colTable .c-share{text-align:right;align-self:start}
+  #colTable .c-de{justify-self:start}
 }
 
 .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
@@ -1413,6 +1427,7 @@ function render(){
       '<td class="c-sel"><select id="sel'+i+'" data-i="'+i+'" aria-label="Dose für Farbe '+(i+1)+'">'+opts+'</select>'+(subs?'<div class="subs">Andere Marken: '+subs+'</div>':'')+'</td>'+
       '<td class="mid c-de">'+deChip(d)+(c.priceSwap?'<span class="pricechip" title="Wegen des Preises statt '+esc(palette[c.best].brand+' '+palette[c.best].code)+' gewählt">günstiger</span>':'')+'</td>'+
       '<td class="num c-share">'+(c.extra?'–':nf1.format(c.share*100)+' %')+'</td>'+
+      '<td class="c-subs">'+(subs?'<div class="subs">Andere Marken: '+subs+'</div>':'')+'</td>'+
       '<td class="c-qty"><span class="qty sm"><button type="button" data-ci="'+i+'" data-d="-1" aria-label="Eine Dose weniger für Farbe '+(i+1)+'">−</button><input type="number" min="0" step="1" value="'+(c.qty??1)+'" data-cqi="'+i+'" aria-label="Dosen für Farbe '+(i+1)+'"><button type="button" data-ci="'+i+'" data-d="1" aria-label="Eine Dose mehr für Farbe '+(i+1)+'">+</button></span></td></tr>';
   }).join("");
   const groups=[]; r.list.forEach(e=>{const q=palette[e.pi], b=q.brand; let g=groups.find(x=>x.brand===b); if(!g){g={brand:b,items:[],total:0,cost:0,missing:0};groups.push(g);} g.items.push(e); g.total+=e.count; if(q.price!=null) g.cost+=q.price*e.count; else g.missing+=e.count;});
