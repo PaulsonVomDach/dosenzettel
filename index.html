@@ -279,6 +279,10 @@ details.alt .subs{margin-top:6px}
 .can .name{font-size:12px;color:var(--muted);line-height:1.2}
 .listhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px}
 .status{font-size:13px;color:var(--good);min-height:1.5em;margin:0}
+.export{display:flex;flex-direction:column;gap:8px;padding:14px;border:2px dashed var(--line);border-radius:12px}
+.export h3{margin:0;font-size:16px}
+.export .hint{margin:0}
+.extext{width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:12.5px;line-height:1.5;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--wall);color:var(--ink);resize:vertical;min-height:140px}
 .copyfallback{display:none;margin-top:10px}
 .copyfallback.show{display:block}
 .note{border-left:4px solid var(--accent);padding:6px 0 6px 12px;font-size:13.5px;color:var(--muted);margin:0}
@@ -425,7 +429,7 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
         <li><h4>Marken einstellen</h4><p>Bei <b>„Farbkarten“</b>: <b>„Eine Marke“</b> oder <b>„Markenmix“</b>. Mit <b>„Nach Rolle trennen“</b> bekommt Fill z.&nbsp;B. High Pressure und Outline Low Pressure. Rollen, die im Piece nicht vorkommen, hakst du ab.</p></li>
         <li><h4>Liste prüfen</h4><p>Die <b>„Einkaufsliste“</b> zeigt pro Farbe die passende Dose. Wie viele Dosen du brauchst, stellst du mit <b>−</b> und <b>+</b> ein. Wirkt eine Bildfarbe zu dunkel oder zu hell, verschiebst du sie mit <b>„heller“</b> oder <b>„dunkler“</b>. Passt eine Dose nicht, tauschst du sie bei <b>„Ersatz finden“</b>.</p></li>
         <li><h4>Sammeln</h4><p>Mehrere Pieces? Leg jede Liste mit <b>„In den Sammelkorb“</b> ab. Gleiche Dosen werden zusammengezählt, Staffelpreise zählen pro Marke.</p></li>
-        <li><h4>Bestellen</h4><p>Im <b>„Sammelkorb“</b> gibt es pro Marke ein <b>Warenkorb-Skript</b> für betterrun.shop, mit eigener Anleitung. Oder <b>„Liste kopieren“</b> und selbst bestellen.</p></li>
+        <li><h4>Bestellen</h4><p>Im <b>„Sammelkorb“</b> gibt es pro Marke ein <b>Warenkorb-Skript</b> für betterrun.shop, mit eigener Anleitung. Oder du kopierst dir die <b>Einkaufsliste als Text</b> in die Handy-Notizen und kaufst im Laden.</p></li>
       </ol>
       <p class="gfoot"><b>Wird gespeichert:</b> Deine Einstellungen bei den Farbkarten, der Sammelkorb und gespeicherte Kombis bleiben in diesem Browser. Beim nächsten Besuch ist alles wieder da. Bilder werden nie gespeichert.</p>
     </div>
@@ -619,7 +623,6 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
       <section class="panel stack" aria-labelledby="h-basket" id="basket">
         <div class="listhead">
           <h2 id="h-basket">Sammelkorb</h2>
-          <button class="btn" id="basketCopy" type="button">Liste kopieren</button>
         </div>
         <details class="howto" id="howto">
           <summary><span class="q">?</span>So geht's: Warenkorb-Skript in 6 Schritten<svg class="chev" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.5"/></svg></summary>
@@ -657,6 +660,12 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
         </details>
         <div class="pieces" id="pieces"></div>
         <div id="basketBody"></div>
+        <div class="export" id="basketExport" hidden>
+          <h3>Einkaufsliste als Text</h3>
+          <p class="hint">Zum Abhaken im Laden: kopieren und in deine Handy-Notizen, WhatsApp oder eine Mail einfügen.</p>
+          <textarea class="extext" id="basketText" readonly rows="8" aria-label="Einkaufsliste als Text"></textarea>
+          <div class="row"><button class="btn primary" id="basketCopy" type="button">Text kopieren</button><button class="btn" id="basketShare" type="button" hidden>Teilen</button></div>
+        </div>
         <div class="row"><button class="btn" id="basketClear" type="button">Sammelkorb leeren</button></div>
         <p class="hint">Gleiche Dosen aus verschiedenen Pieces werden zusammengezählt, und jede Marke landet in einem Warenkorb-Skript. Die Staffel zählt über alle Farben einer Marke, ein Rack sind 6 Dosen. Die Mengen stellst du hier ein. Der Sammelkorb bleibt in diesem Browser gespeichert.</p>
         <p class="status" id="basketStatus" role="status"></p>
@@ -899,6 +908,16 @@ function parsePrice(v){
   const n=parseFloat(t); return isFinite(n)&&n>0?n:null;
 }
 const eur=n=>new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR"}).format(n);
+/* Einkaufsliste als reiner Text, gedacht für Handy-Notizen oder Messenger: ein Kästchen pro Dose zum Abhaken, keine Hex-Werte. */
+function rackTxt(n){ const r=Math.floor(n/6), x=n%6; return r?r+" Rack"+(r>1?"s":"")+(x?" + "+x:""):""; }
+function notesText(title,sub,groups){
+  let n=0, cost=0, miss=0;
+  const body=groups.map(g=>{ n+=g.qty; cost+=g.cost||0; miss+=g.missing||0; const rk=rackTxt(g.qty);
+    return g.brand.toUpperCase()+" · "+g.qty+" Dose"+(g.qty>1?"n":"")+(rk?" ("+rk+")":"")+(g.cost?" · ca. "+eur(g.cost):"")+"\n"+
+      g.rows.map(r=>"☐ "+r.qty+"× "+r.code+" "+r.name).join("\n"); }).join("\n\n");
+  return "DOSENZETTEL · "+title+"\n"+new Date().toLocaleDateString("de-DE")+(sub?" · "+sub:"")+"\n\n"+body+"\n\n"+
+    "Gesamt: "+n+" Dose"+(n>1?"n":"")+(cost?" · ca. "+eur(cost)+(miss?" ("+miss+" ohne Preis)":""):"");
+}
 try{
   if(!matchBrand){ const old=localStorage.getItem(STORE_BRAND)||""; if(old==="*") matchMode="mix"; else matchBrand=old; }
   setPalette(composePalette(),false);
@@ -1466,10 +1485,7 @@ function render(){
   $("tCans").textContent=nf0.format(r.total);
   $("tCost").textContent=costAll?eur(costAll):"–";
   $("tCostLbl").textContent=costAll?(missAll?"Kosten ca., "+missAll+" Dose"+(missAll>1?"n":"")+" ohne Preis":"Kosten ca., Einzelpreise"):"Kosten: noch keine Preise";
-  lastText="Dosenliste\n"+
-    groups.map(g=>"\n"+g.brand+(pressureOf(g.brand)?" · "+PR_LABEL[pressureOf(g.brand)]+" Pressure":"")+" ("+g.total+costTxt(g).replace(" · ",", ")+")\n"+g.items.map(e=>{const q=palette[e.pi]; const s=imageSubs(e.lab,q.brand,e.role)[0];
-      return e.count+"× "+q.code+" "+q.name+" ("+q.hex+", "+(e.cl.every(c=>c.extra)?"zusätzlich":nf1.format(e.share*100)+" % vom Bild")+")"+(splitRoles?" ["+roleTag(e)+"]":"")+(q.price!=null?" · "+eur(q.price):"")+(s?"  | Ersatz: "+s.p.brand+" "+s.p.code+" "+s.p.name:"");}).join("\n")).join("\n")+"\n"+
-    "\nGesamt: "+r.total+" Dosen in "+r.list.length+" Farben"+(costAll?", ca. "+eur(costAll)+(missAll?" (ohne "+missAll+" ohne Preis)":""):"")+(paletteIsDemo?"\n(Demo-Farbkarten, keine echten Herstellerfarben)":"");
+  lastText=notesText("Einkaufsliste",$("pieceName").value.trim(),groups.map(g=>({brand:g.brand,qty:g.total,cost:g.cost,missing:g.missing,rows:g.items.map(e=>({qty:e.count,code:palette[e.pi].code,name:palette[e.pi].name}))})))+(paletteIsDemo?"\n(Demo-Farbkarten, keine echten Herstellerfarben)":"");
   if(!finderSet && r.list.length){ finderSet=true; setFinder(r.list[0].pi,false); }
   else if(syncFinderBrands() || (finderCtx!=null && !inList(finderCtx))) renderFinder();
   if(mode==="combo") drawCombo(); else drawPreview();
@@ -2083,8 +2099,8 @@ function renderBasket(){
   $("pieces").innerHTML=basket.pieces.length?basket.pieces.map(p=>'<span class="pc">'+esc(p.name)+' <small>'+(p.qty?Object.values(p.qty).reduce((a,b)=>a+b,0)+' Dosen':p.keys.length+' Farben')+'</small><button type="button" data-rm="'+esc(p.id)+'" aria-label="'+esc(p.name)+' aus dem Sammelkorb nehmen">×</button></span>').join("")
     :'<p class="hint">Noch leer. Stell oben die Dosen für ein Piece zusammen und leg sie mit „In den Sammelkorb“ hier ab. Dann das nächste Piece.</p>';
   const groups=basketGroups(); lastBasketGroups=groups;
-  if(!groups.length){ $("basketBody").innerHTML=""; $("basketCopy").disabled=true; $("basketClear").disabled=true; return; }
-  $("basketCopy").disabled=false; $("basketClear").disabled=false;
+  if(!groups.length){ $("basketBody").innerHTML=""; $("basketExport").hidden=true; $("basketClear").disabled=true; return; }
+  $("basketExport").hidden=false; $("basketClear").disabled=false;
   let all=0, allFull=0, allQty=0, miss=0;
   $("basketBody").innerHTML=groups.map((g,gi)=>{
     all+=g.total; allFull+=g.full; allQty+=g.qty; miss+=g.missing;
@@ -2099,6 +2115,7 @@ function renderBasket(){
         '<td class="q"><span class="qty"><button type="button" data-dq="'+esc(r.key)+'" data-d="-1" aria-label="Eine weniger">−</button><input type="number" min="0" step="1" value="'+r.it.qty+'" data-qk="'+esc(r.key)+'" aria-label="Menge '+esc(r.it.code)+'"><button type="button" data-dq="'+esc(r.key)+'" data-d="1" aria-label="Eine mehr">+</button></span></td>'+
         '<td class="pr">'+(r.unit!=null?eur(r.unit*r.it.qty):"–")+'</td></tr>').join("")+'</tbody></table></div>';
   }).join("")+'<div class="btotal"><span>'+allQty+' Dosen aus '+basket.pieces.length+' Piece'+(basket.pieces.length>1?"s":"")+(allFull-all>0.004?', gespart durch Staffel: '+eur(allFull-all):'')+(miss?', '+miss+' ohne Preis':'')+'</span><b>'+eur(all)+'</b></div>';
+  $("basketText").value=basketNotes(groups);
 }
 function addToBasket(){
   const r=compute(); if(!r.list.length){ $("basketStatus").textContent="Keine Dosen ausgewählt."; return; }
@@ -2136,10 +2153,15 @@ $("basketClear").addEventListener("click",()=>{
   basket={pieces:[],items:{}}; saveBasket(); renderBasket(); optimizePrice(); render();
   $("basketStatus").textContent="Sammelkorb geleert.";
 });
-$("basketCopy").addEventListener("click",()=>{
-  const groups=basketGroups(); let all=0;
-  const txt="Sammelkorb: "+basket.pieces.map(p=>p.name).join(", ")+"\n"+groups.map(g=>{ all+=g.total; return "\n"+g.brand+" ("+g.qty+" Dosen = "+Math.floor(g.qty/6)+" Racks + "+(g.qty%6)+(g.total?", "+eur(g.total):"")+")\n"+g.rows.filter(r=>r.it.qty).map(r=>r.it.qty+"× "+r.it.code+" "+r.name+" ("+r.hex+")"+(r.unit!=null?" · "+eur(r.unit)+"/Dose":"")).join("\n"); }).join("\n")+"\n\nGesamt: "+eur(all);
-  copyText(txt,"Sammelkorb-Liste kopiert.","basket");
+function basketNotes(groups){
+  return notesText("Einkaufsliste",basket.pieces.map(p=>p.name).join(", "),groups.map(g=>{ const rows=g.rows.filter(r=>r.it.qty);
+    return {brand:g.brand,qty:rows.reduce((a,r)=>a+r.it.qty,0),cost:g.total,missing:g.missing,rows:rows.map(r=>({qty:r.it.qty,code:r.it.code,name:r.name}))}; }).filter(g=>g.qty));
+}
+$("basketCopy").addEventListener("click",()=>copyText($("basketText").value,"Einkaufsliste kopiert. Jetzt z. B. in deine Notizen einfügen.","basket"));
+$("basketText").addEventListener("focus",e=>e.target.select());
+if(navigator.share) $("basketShare").hidden=false;
+$("basketShare").addEventListener("click",()=>{
+  navigator.share({title:"Einkaufsliste",text:$("basketText").value}).catch(err=>{ if(err&&err.name!=="AbortError") $("basketStatus").textContent="Teilen geht hier nicht. Nimm „Text kopieren“."; });
 });
 renderBasket();
 
