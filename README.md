@@ -1,6 +1,6 @@
 # Dosenzettel
 
-**Von Writern für Writer. Berlin Original.**
+**Von Writern für Writer. Berliner Original.**
 
 Der Dosenzettel macht aus einer Skizze, einem Foto vom Piece oder einer selbst zusammengestellten Farbkombi eine Einkaufsliste mit echten Dosen. Er sucht für jede Farbe die passende Dose, zeigt Ersatz aus anderen Marken, rechnet Mengenrabatte über mehrere Pieces und hilft beim Befüllen des Warenkorbs im Shop.
 
