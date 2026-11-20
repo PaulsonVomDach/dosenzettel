@@ -53,6 +53,7 @@
     if (t.closest("#copyBtn")) return track("liste-kopiert", { modus: currentMode() });
     if (t.closest("#addBasket")) return track("sammelkorb-hinzugefuegt");
     if (t.closest("#basketCopy")) return track("sammelkorb-kopiert");
+    if (t.closest("#basketShare")) return track("sammelkorb-geteilt");
     if (t.closest("#comboSave")) return track("kombi-gespeichert");
 
     if ((el = t.closest("[data-cart]"))) return track("warenkorb-skript", { marke: brandOf(el), shop: "betterrun.shop", quelle: "einkaufsliste" });
