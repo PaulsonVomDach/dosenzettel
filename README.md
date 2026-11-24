@@ -126,29 +126,43 @@ npx wrangler kv key put canImages --path=../kv-daten/canImages.json --binding=AS
 npx wrangler kv key put piece --path=../kv-daten/piece.json --binding=ASSETS --remote
 ```
 
-### 4. Secrets setzen und deployen
+### 4. Bot-Check (Cloudflare Turnstile) anlegen
+
+1. Im Cloudflare-Dashboard unter **Turnstile** → **Add widget**.
+2. Name `dosenzettel`, Hostname die Pages-Domain (z. B. `dosenzettel.pages.dev`, Vorschau-Adressen sind damit automatisch abgedeckt), Modus **Invisible**.
+3. Den **Site Key** in `index.html` bei `TURNSTILE_SITEKEY` eintragen. Der ist öffentlich.
+4. Den **Secret Key** nur als Secret im Worker setzen (Schritt 5), nie ins Repo.
+
+### 5. Secrets setzen und deployen
 
 ```bash
 npx wrangler secret put SHEET_ID                 # die ID aus der Sheet-URL
 npx wrangler secret put GOOGLE_SERVICE_ACCOUNT < pfad/zur/schluesseldatei.json
+npx wrangler secret put TURNSTILE_SECRET         # Secret Key aus Schritt 4
 npx wrangler deploy
 ```
 
-Wrangler zeigt danach die Adresse des Workers, z. B. `https://dosenzettel-api.<dein-name>.workers.dev`. Test: `https://…workers.dev/data` im Browser öffnen, es sollte JSON kommen.
+Wrangler zeigt danach die Adresse des Workers, z. B. `https://dosenzettel-api.<dein-name>.workers.dev`. Test: `https://…workers.dev/data` im Browser öffnen. Es sollte `{"error":"origin not allowed"}` kommen. So soll es sein: Direkt gibt der Worker nichts heraus, nur über die Seite.
 
-### 5. Seite mit dem Worker verbinden
+### 6. Seite mit dem Worker verbinden
 
 1. In `index.html` die Worker-Adresse eintragen: `<meta name="dosenzettel-api" content="https://dosenzettel-api.<dein-name>.workers.dev">`
 2. Die Domain der Seite in `api/wrangler.toml` bei `ALLOWED_ORIGINS` eintragen und `npx wrangler deploy` erneut ausführen.
 
-### 6. Seite über Cloudflare Pages veröffentlichen
+### 7. Seite über Cloudflare Pages veröffentlichen
 
 Cloudflare Dashboard → **Workers & Pages → Erstellen → Pages → Mit Git verbinden** → Repo `dosenzettel`, Branch `main`, kein Build-Befehl, Ausgabeverzeichnis `/`.
 
 ### Gut zu wissen
 
 - Der Worker merkt sich die Daten 10 Minuten (`CACHE_SECONDS`). Änderungen im Sheet sind spätestens dann online.
-- `ALLOWED_ORIGINS` verhindert, dass fremde Webseiten die Daten einbinden. Wer die Adresse `/data` direkt aufruft, bekommt die Daten trotzdem. Für die Testphase reicht das. Soll die Farbdatenbank später wirklich geschützt sein, muss die Zuordnung Farbe → Dose im Worker passieren, sodass die Seite nur noch Hex-Werte schickt und passende Dosen zurückbekommt.
+- So sind die Farbkarten geschützt:
+  - **Nur über die Seite:** Ohne erlaubte Herkunft (`ALLOWED_ORIGINS`) gibt es `403`. Wer `/data` direkt im Browser öffnet oder per Skript abruft, bekommt nichts.
+  - **Bot-Check:** Jeder Abruf braucht ein frisches Turnstile-Token. Die Seite holt es unsichtbar, Besucher merken davon nichts.
+  - **Rate-Limit:** Höchstens 10 Abrufe pro IP und Minute (`[[ratelimits]]` in `wrangler.toml`).
+  - **Grenze:** Wer die Seite normal öffnet, bekommt die Farbkarten in seinen Browser, sonst könnte der Dosenzettel nicht rechnen. Mit den Entwicklertools lassen sie sich dort weiterhin auslesen. Vollständig geschützt wären sie erst, wenn die Zuordnung Farbe → Dose im Worker passiert und die Seite nur noch die passenden Dosen bekommt.
+- Vorschau-Adressen von Cloudflare Pages (z. B. `dev.dosenzettel.pages.dev`) sind über `https://*.dosenzettel.pages.dev` in `ALLOWED_ORIGINS` freigegeben.
+- Lokal testen: `api/.dev.vars.example` nach `api/.dev.vars` kopieren, `cd api && npm run dev` starten und die Seite mit `?api=http://localhost:8787` öffnen. Auf `localhost` nutzt die Seite automatisch Cloudflares Test-Schlüssel.
 - Lokaler Test des Workers ohne Google und Cloudflare: `cd api && npm test`
 
 ## Lizenz

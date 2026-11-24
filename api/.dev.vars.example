@@ -1,0 +1,5 @@
+# Für lokales Testen mit "npm run dev" nach .dev.vars kopieren (wird nicht eingecheckt).
+# Cloudflares Test-Secret: akzeptiert jedes Test-Token. Die Seite nutzt auf localhost automatisch den passenden Test-Site-Key.
+TURNSTILE_SECRET="1x0000000000000000000000000000000AA"
+ALLOWED_ORIGINS="http://localhost:8788"
+# SHEET_ID und GOOGLE_SERVICE_ACCOUNT hier ebenfalls eintragen, wenn lokal echte Daten geladen werden sollen.
