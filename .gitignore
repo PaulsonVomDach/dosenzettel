@@ -3,3 +3,4 @@ node_modules/
 kv-daten/
 *.json.key
 .DS_Store
+.dev.vars

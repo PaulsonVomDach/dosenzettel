@@ -125,6 +125,7 @@ a.btn{text-decoration:none;display:inline-block}
 .cangroup + .cangroup{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
 .grouphead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 12px;margin-top:6px}
 .gacts{display:flex;flex-wrap:wrap;gap:6px}
+.ts-box{position:absolute;left:0;bottom:0;width:1px;height:1px;overflow:hidden}
 .btn.small{font-size:12.5px;padding:4px 9px}
 .cangroup h3{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.05em;display:flex;gap:8px;align-items:baseline}
 .cangroup h3 span{font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0}
@@ -714,7 +715,7 @@ th{color:var(--ink);font-weight:800;letter-spacing:.03em}
       <li><b>Sammelkorb, Kombis, Einstellungen:</b> Die liegen nur im Speicher dieses Browsers auf deinem Gerät. Niemand sonst sieht sie. Löschst du die Browserdaten, sind sie weg.</li>
       <li><b>Kein Konto, kein Login, keine Cookies.</b> Der Dosenzettel weiß nicht, wer du bist.</li>
       <li><b>Anonyme Zählung:</b> Gezählt wird nur, welche Funktionen benutzt werden, z. B. „Liste kopiert“ oder „Warenkorb-Skript für Marke X“. Dafür läuft Umami, ohne Cookies und ohne dich wiederzuerkennen. Bilder, Farbwerte und Listen werden dabei nie verschickt. Was genau gezählt wird, steht offen in <code>tracking.js</code>. Ist in deinem Browser „Do Not Track“ an, wird gar nichts gezählt.</li>
-      <li><b>Was geladen wird:</b> die Farbkarten und Preise der Marken, die Schriften und das Zählskript von Umami. Bilder, Listen oder Kombis von dir werden dabei nicht mitgeschickt.</li>
+      <li><b>Was geladen wird:</b> die Farbkarten und Preise der Marken, die Schriften, das Zählskript von Umami und ein unsichtbarer Bot-Check von Cloudflare (Turnstile), der die Farbkarten vor automatischem Abgreifen schützt. Bilder, Listen oder Kombis von dir werden dabei nicht mitgeschickt.</li>
       <li><b>Warenkorb:</b> Das Skript führst du selbst im Shop aus. Der Dosenzettel schickt nichts an den Shop.</li>
     </ul>
   </section>
@@ -2061,11 +2062,37 @@ $("sheetAllow").addEventListener("click",async()=>{
 });
 /* Daten kommen von der eigenen API (z. B. Cloudflare Worker). Adresse im <meta name="dosenzettel-api"> oder zum Testen per ?api=… */
 const API_BASE=(new URLSearchParams(location.search).get("api")||document.querySelector('meta[name="dosenzettel-api"]')?.content||"").replace(/\/$/,"");
+/* Unsichtbarer Bot-Check (Cloudflare Turnstile). Ohne gültiges Token gibt die API keine Farbkarten heraus.
+   Lokal (localhost) wird Cloudflares Test-Schlüssel genutzt, der immer durchgeht. */
+const TURNSTILE_SITEKEY=/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?"1x00000000000000000000BB":"0x4AAAAAAGRAG4uW7TGFUJUx";
+function turnstileToken(){
+  return new Promise((resolve,reject)=>{
+    let done=false;
+    const finish=(fn,v)=>{ if(done) return; done=true; clearTimeout(timer); fn(v); };
+    const timer=setTimeout(()=>finish(reject,new Error("Bot-Check dauert zu lange")),20000);
+    const run=()=>{
+      try{
+        const box=document.createElement("div"); box.className="ts-box"; document.body.appendChild(box);
+        window.turnstile.render(box,{sitekey:TURNSTILE_SITEKEY,action:"farbkarten",
+          callback:t=>finish(resolve,t),
+          "error-callback":c=>{ finish(reject,new Error("Bot-Check fehlgeschlagen"+(c?" ("+c+")":""))); return true; },
+          "timeout-callback":()=>finish(reject,new Error("Bot-Check abgelaufen"))});
+      }catch(e){ finish(reject,e); }
+    };
+    if(window.turnstile) return run();
+    const sc=document.createElement("script");
+    sc.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; sc.async=true;
+    sc.onload=run; sc.onerror=()=>finish(reject,new Error("Bot-Check konnte nicht geladen werden, evtl. blockiert ein Adblocker"));
+    document.head.appendChild(sc);
+  });
+}
 (async()=>{
   if(!API_BASE){ sheet.state="warn"; sheet.text="Keine Farbkarten-Quelle eingestellt."; renderSheetStatus(); return; }
   sheet.state="connecting"; sheet.text="Lade Farbkarten …"; renderSheetStatus();
   try{
-    const r=await fetch(API_BASE+"/data",{headers:{accept:"application/json"}});
+    const token=await turnstileToken();
+    const r=await fetch(API_BASE+"/data",{headers:{accept:"application/json","X-Turnstile-Token":token}});
+    if(r.status===429) throw new Error("zu viele Aufrufe, bitte in einer Minute neu laden");
     if(!r.ok) throw new Error("HTTP "+r.status);
     const d=await r.json();
     if(Array.isArray(d.brands)) onBrandMeta({payload:{values:d.brands}});

@@ -8,11 +8,23 @@ compatibility_date = "2026-11-01"
 binding = "ASSETS"
 id = "01028b03a2cf47f8930aa5a202100904"
 
+# Höchstens 10 Datenabrufe pro IP und Minute. Ein Seitenaufruf braucht genau einen.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60
+
 [vars]
-# Domains, die die Daten abrufen dürfen (kommagetrennt). Deine Pages-Domain eintragen.
-ALLOWED_ORIGINS = "https://dosenzettel.pages.dev,http://localhost:8788"
+# Seiten, die die Daten abrufen dürfen (kommagetrennt).
+# "https://*.dosenzettel.pages.dev" erlaubt alle Vorschau-Adressen, z. B. dev.dosenzettel.pages.dev.
+# Lokal testen: siehe .dev.vars.example
+ALLOWED_ORIGINS = "https://dosenzettel.pages.dev,https://*.dosenzettel.pages.dev"
 CACHE_SECONDS = "600"
 
 # Geheim, NICHT hier eintragen, sondern mit:
 #   npx wrangler secret put GOOGLE_SERVICE_ACCOUNT   (Inhalt der JSON-Schlüsseldatei)
 #   npx wrangler secret put SHEET_ID
+#   npx wrangler secret put TURNSTILE_SECRET         (Secret Key des Turnstile-Widgets)

@@ -7,7 +7,15 @@
  *   Zugriff über einen Google-Service-Account, dem das Sheet (nur Lesen) freigegeben ist.
  * - canImages und piece (Dosenfotos, Beispiel-Piece) liegen im KV-Speicher „ASSETS“.
  *
- * Secrets:   GOOGLE_SERVICE_ACCOUNT (JSON-Schlüssel), SHEET_ID
+ * Schutz vor Direktzugriff und Massenabfragen:
+ * - Nur Anfragen von erlaubten Seiten (Origin aus ALLOWED_ORIGINS, auch *.domain für Vorschauen).
+ *   Direkt im Browser geöffnet oder per Skript ohne Origin: 403.
+ * - Jede Anfrage braucht ein gültiges Cloudflare-Turnstile-Token (Header X-Turnstile-Token).
+ *   Die Seite holt es unsichtbar im Hintergrund. Tokens gelten einmal und nur kurz.
+ * - Rate-Limit pro IP (Binding RATE_LIMITER, siehe wrangler.toml).
+ * - Antworten werden im Browser nicht gespeichert (Cache-Control: no-store).
+ *
+ * Secrets:   GOOGLE_SERVICE_ACCOUNT (JSON-Schlüssel), SHEET_ID, TURNSTILE_SECRET
  * Variablen: ALLOWED_ORIGINS (kommagetrennt), CACHE_SECONDS
  */
 
@@ -21,7 +29,15 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     if (url.pathname !== "/data") return json({ error: "not found" }, 404, cors);
     if (request.method !== "GET") return json({ error: "method not allowed" }, 405, cors);
-    if (!cors["Access-Control-Allow-Origin"] && request.headers.get("Origin")) return json({ error: "origin not allowed" }, 403, {});
+    if (!request.headers.get("Origin") || !cors["Access-Control-Allow-Origin"]) return json({ error: "origin not allowed" }, 403, {});
+
+    const ip = request.headers.get("CF-Connecting-IP") || "";
+    if (env.RATE_LIMITER) {
+      const { success } = await env.RATE_LIMITER.limit({ key: ip || "unknown" });
+      if (!success) return json({ error: "too many requests" }, 429, { ...cors, "Retry-After": "60" });
+    }
+    const check = await verifyTurnstile(request.headers.get("X-Turnstile-Token"), ip, env);
+    if (!check.ok) return json({ error: check.error }, check.status, cors);
 
     const maxAge = Number(env.CACHE_SECONDS || 600);
     const cache = caches.default;
@@ -40,9 +56,29 @@ export default {
     }
     const out = new Response(res.body, res);
     for (const [k, v] of Object.entries(cors)) out.headers.set(k, v);
+    out.headers.set("Cache-Control", "private, no-store");
     return out;
   },
 };
+
+/* Turnstile-Token bei Cloudflare prüfen. Ohne Secret wird nichts herausgegeben. */
+export async function verifyTurnstile(token, ip, env) {
+  if (!env.TURNSTILE_SECRET) return { ok: false, status: 503, error: "turnstile not configured" };
+  if (!token || token.length > 2048) return { ok: false, status: 403, error: "missing token" };
+  const body = new FormData();
+  body.append("secret", env.TURNSTILE_SECRET);
+  body.append("response", token);
+  if (ip) body.append("remoteip", ip);
+  let d;
+  try {
+    const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body });
+    if (!r.ok) return { ok: false, status: 502, error: "turnstile unavailable" };
+    d = await r.json();
+  } catch (e) {
+    return { ok: false, status: 502, error: "turnstile unavailable" };
+  }
+  return d && d.success ? { ok: true } : { ok: false, status: 403, error: "turnstile failed" };
+}
 
 export async function buildData(env) {
   const [sheet, canImages, piece] = await Promise.all([
@@ -99,12 +135,22 @@ function b64url(bytes) {
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+/* Erlaubt: exakte Origins und Muster wie https://*.dosenzettel.pages.dev (alle Vorschau-Adressen). */
+export function originAllowed(origin, list) {
+  if (!origin) return false;
+  return String(list || "").split(",").map(s => s.trim()).filter(Boolean).some(a => {
+    if (a === origin) return true;
+    const m = a.match(/^(https?:\/\/)\*\.(.+)$/);
+    if (!m) return false;
+    const re = new RegExp("^" + m[1].replace(/[/:]/g, "\\$&") + "([a-z0-9-]+\\.)+" + m[2].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
+    return re.test(origin);
+  });
+}
+
 function corsHeaders(request, env) {
   const origin = request.headers.get("Origin") || "";
-  const allowed = String(env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
-  const ok = allowed.includes("*") || allowed.includes(origin);
-  return ok && origin
-    ? { "Access-Control-Allow-Origin": allowed.includes("*") ? "*" : origin, "Access-Control-Allow-Methods": "GET, OPTIONS", "Vary": "Origin" }
+  return originAllowed(origin, env.ALLOWED_ORIGINS)
+    ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Allow-Headers": "Accept, X-Turnstile-Token", "Access-Control-Max-Age": "86400", "Vary": "Origin" }
     : {};
 }
 
